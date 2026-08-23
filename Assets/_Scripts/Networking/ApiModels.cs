@@ -67,7 +67,8 @@ namespace JadedBelles.Networking
     [Serializable]
     public class UserData
     {
-        public int id;
+        // JadedBelles user ids are Guids — keep the raw string form.
+        public string id;
         public string email;
         public string displayName;
     }
