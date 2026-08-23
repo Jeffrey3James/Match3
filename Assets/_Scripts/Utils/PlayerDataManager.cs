@@ -19,15 +19,22 @@ public class PlayerDataManager : MonoBehaviour
     private const int SaveSlot = 0;
     private const int SaveSchemaVersion = 1;
 
-    private void OnEnable()
+    private void Awake()
     {
         if (instance == null) instance = this;
         else { Destroy(gameObject); return; }
         DontDestroyOnLoad(gameObject);
+    }
+
+    // Start runs after every Awake in the scene, so PlayerHandler.instance and
+    // GameEventsManager.instance are guaranteed to exist before we hand them data.
+    private void Start()
+    {
+        if (instance != this) return;
 
         LoadLocalPlayerData();
 
-        if (JadedBellesApiClient.Instance.HasSession)
+        if (JadedBellesApiClient.Instance != null && JadedBellesApiClient.Instance.HasSession)
         {
             PullRemotePlayerData();
         }
@@ -52,8 +59,21 @@ public class PlayerDataManager : MonoBehaviour
             data = new PlayerData("Player", 0, 5, 100, 0);
         }
 
+        if (PlayerHandler.instance == null)
+        {
+            Debug.LogWarning("PlayerDataManager: PlayerHandler.instance is null; can't hand off player data. Is PlayerHandler in this scene?");
+            return;
+        }
         PlayerHandler.instance.RecievePlayerDataFromCloud(data);
-        GameEventsManager.instance.gameEvents.PlayerDataLoaded();
+
+        if (GameEventsManager.instance != null && GameEventsManager.instance.gameEvents != null)
+        {
+            GameEventsManager.instance.gameEvents.PlayerDataLoaded();
+        }
+        else
+        {
+            Debug.LogWarning("PlayerDataManager: GameEventsManager.instance not ready; skipping PlayerDataLoaded event.");
+        }
     }
 
     /// <summary>Fetches slot zero and applies it only when it is newer than local data.</summary>
