@@ -2,11 +2,10 @@
 using UnityEngine;
 using Match3Game;
 using UnityEngine.UI;
-using System.Dynamic;
 using System.Collections.Generic;
 using System;
 using UnityEngine.SceneManagement;
-using UnityEditor.PackageManager;
+using Match3Game.Monetization;
 
 public class Match3UI : MonoBehaviour
 {
@@ -21,6 +20,11 @@ public class Match3UI : MonoBehaviour
     [SerializeField] private Button retry;
     [SerializeField] private Button mainMenu;
     [SerializeField] private Transform uiContainer;
+
+    [Header("Rewarded Ads (optional)")]
+    [Tooltip("'Watch ad: +5 moves' button inside the game-over window. Leave unassigned to ship without the offer.")]
+    [SerializeField] private Button watchAdExtraMoves;
+    [SerializeField] private Match3 board;
 
     [Header("UI Background Container")]
     [SerializeField] private TextMeshProUGUI coinText;
@@ -86,8 +90,40 @@ public class Match3UI : MonoBehaviour
 
     private void LevelFailed()
     {
-        
+        RefreshWatchAdButton();
         gameOverWindow.SetActive(true);
+    }
+
+    // The offer is only visible when AdManager says an ad is loaded AND the
+    // player is eligible (past level 3, under the 2-per-attempt cap). Fail
+    // closed: no AdManager, no button.
+    private void RefreshWatchAdButton()
+    {
+        if (watchAdExtraMoves == null) return;
+        bool available = AdManager.Instance != null && AdManager.Instance.IsExtraMovesOfferAvailable();
+        watchAdExtraMoves.gameObject.SetActive(available);
+        watchAdExtraMoves.interactable = available;
+    }
+
+    private void OnWatchAdClicked()
+    {
+        if (AdManager.Instance == null) return;
+        watchAdExtraMoves.interactable = false; // no double-taps while the ad shows
+
+        AdManager.Instance.ShowRewardedExtraMoves(
+            onGranted: () =>
+            {
+                var target = board != null ? board : FindFirstObjectByType<Match3>();
+                if (target != null && target.TryResumeWithExtraMoves(AdManager.ExtraMovesPerAd))
+                {
+                    gameOverWindow.SetActive(false);
+                }
+                else
+                {
+                    RefreshWatchAdButton();
+                }
+            },
+            onNotGranted: RefreshWatchAdButton);
     }
 
     private void LevelComplete()
@@ -154,6 +190,12 @@ public class Match3UI : MonoBehaviour
                 SceneManager.LoadScene("MainMenu");
                 Debug.Log("Main Menu button clicked");
             });
+
+        if (watchAdExtraMoves != null)
+        {
+            watchAdExtraMoves.onClick.AddListener(OnWatchAdClicked);
+            watchAdExtraMoves.gameObject.SetActive(false); // hidden until eligible
+        }
     }
 }
 
