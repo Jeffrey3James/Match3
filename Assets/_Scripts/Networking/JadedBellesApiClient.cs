@@ -12,10 +12,16 @@ namespace JadedBelles.Networking
     /// </summary>
     public sealed class JadedBellesApiClient : MonoBehaviour
     {
-        public const string BaseUrl = "https://api.jadedbelles.com";
+        // The App Service default hostname ships with a valid Microsoft-managed
+        // certificate on every platform (browser, Android, iOS, editor) — the
+        // same base URL the jadedbelles.com website itself calls. The custom
+        // domain api.jadedbelles.com currently serves a *.azurewebsites.net
+        // cert and fails TLS validation, so don't switch back until an App
+        // Service Managed Certificate is bound to it.
+        public const string BaseUrl = "https://jadedbelles-api-ewatbnarexfqane6.centralus-01.azurewebsites.net";
 
         // Seeded match-3 product slug. Change this one value if Xandria Gem Jam uses a different production product.
-        public const string GameProductSlug = "match3-quest";
+        public const string GameProductSlug = "xandria-gem-jam";
 
         private const int RequestTimeoutSeconds = 30;
 
