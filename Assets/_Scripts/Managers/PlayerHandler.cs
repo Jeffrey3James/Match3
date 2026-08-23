@@ -11,11 +11,11 @@ public class PlayerHandler : MonoBehaviour
     public PlayerData playerData;
 
     [SerializeField] Level playerCurrentLevel;
-    private float TimeUntilNewLife;
 
-     private const float timeToRegainALife = 1200f; // Time in seconds to regenerate a life
+    private const float timeToRegainALife = 1200f; // Time in seconds to regenerate a life
     private const int maxLives = 5; // Maximum number of lives a player can have
-    private CountdownTimer lifeTimer;
+    private float regenPollAccumulator;
+    private const float regenPollInterval = 1f; // Check the countdown once per second
 
     private void Awake()
     {
@@ -37,6 +37,67 @@ public class PlayerHandler : MonoBehaviour
     {
         playerData.playerLevel++;
     }
+
+    private void Update()
+    {
+        // Poll the life-regen countdown about once per second (no need for per-frame checks).
+        regenPollAccumulator += Time.unscaledDeltaTime;
+        if (regenPollAccumulator < regenPollInterval) return;
+        regenPollAccumulator = 0f;
+        TickLifeRegen();
+    }
+
+    /// <summary>
+    /// Grants any lives whose countdown has elapsed. Handles offline catch-up:
+    /// if the player was away for several regen periods, they get all of them
+    /// (up to maxLives). Persists once per batch of granted lives.
+    /// </summary>
+    private void TickLifeRegen()
+    {
+        if (playerData == null) return;
+
+        if (playerData.playerLives >= maxLives)
+        {
+            // Full: no countdown should be running.
+            if (playerData.playerLifeCountdown != 0) playerData.playerLifeCountdown = 0;
+            return;
+        }
+
+        // Below max but no countdown running (legacy saves / after ad-granted lives): start one.
+        if (playerData.playerLifeCountdown == 0)
+        {
+            playerData.playerLifeCountdown = TimeUtils.UnixNow + (long)timeToRegainALife;
+            return;
+        }
+
+        long now = TimeUtils.UnixNow;
+        int granted = 0;
+
+        // Catch-up loop: each elapsed interval grants one life and advances the deadline.
+        while (playerData.playerLives < maxLives && now >= playerData.playerLifeCountdown)
+        {
+            playerData.playerLives++;
+            granted++;
+            playerData.playerLifeCountdown += (long)timeToRegainALife;
+        }
+
+        if (granted > 0)
+        {
+            if (playerData.playerLives >= maxLives) playerData.playerLifeCountdown = 0;
+            Debug.Log($"Regenerated {granted} life/lives. Lives: {playerData.playerLives}/{maxLives}");
+            _ = PlayerDataManager.instance.UpdatePlayerData();
+        }
+    }
+
+    /// <summary>Seconds until the next life arrives, or 0 when full / no countdown. For UI timers.</summary>
+    public long GetSecondsUntilNextLife()
+    {
+        if (playerData == null || playerData.playerLives >= maxLives || playerData.playerLifeCountdown == 0)
+            return 0;
+        return Math.Max(0, playerData.playerLifeCountdown - TimeUtils.UnixNow);
+    }
+
+    public int GetMaxLives() => maxLives;
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
@@ -158,8 +219,12 @@ public class PlayerHandler : MonoBehaviour
     
     private void CalculateNewLife()
     {
-        long newLifeTime = TimeUtils.UnixNow + (long)timeToRegainALife;
-        playerData.playerLifeCountdown = newLifeTime;
+        // Only start a countdown when none is already running. Spending a second
+        // life while a regen is in progress must NOT reset the timer.
+        if (playerData.playerLifeCountdown == 0)
+        {
+            playerData.playerLifeCountdown = TimeUtils.UnixNow + (long)timeToRegainALife;
+        }
         _ = PlayerDataManager.instance.UpdatePlayerData();
     }
 
@@ -168,6 +233,8 @@ public class PlayerHandler : MonoBehaviour
         if (playerData.playerLives < maxLives)
         {
             playerData.playerLives++;
+            // Reaching max cancels any running countdown.
+            if (playerData.playerLives >= maxLives) playerData.playerLifeCountdown = 0;
             Debug.Log($"Added a life. Lives: {playerData.playerLives}/{maxLives}");
             _ = PlayerDataManager.instance.UpdatePlayerData();
         }
