@@ -154,7 +154,6 @@ public class PlayerHandler : MonoBehaviour
             
             Debug.LogWarning("No lives left to use!");
         }
-        #endregion
     }
     
     private void CalculateNewLife()
@@ -166,8 +165,19 @@ public class PlayerHandler : MonoBehaviour
 
     public void AddALifeToPlayer()
     {
-        if (playerData.playerLives >= maxLives) { playerData.playerLives++; }
+        if (playerData.playerLives < maxLives)
+        {
+            playerData.playerLives++;
+            Debug.Log($"Added a life. Lives: {playerData.playerLives}/{maxLives}");
+            _ = PlayerDataManager.instance.UpdatePlayerData();
+        }
+        else
+        {
+            Debug.Log("Player is already at max lives; not adding another.");
+        }
     }
+
+    #endregion
 }
 
 [System.Serializable]
