@@ -1,16 +1,20 @@
-using Unity.Services.Authentication;
-using Unity.Services.Core;
+using JadedBelles.Networking;
+using StroTheGoat;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System.Threading.Tasks;
-using StroTheGoat;
 
+/// <summary>
+/// Boot flow for the splash scene. Shows the logo, silently restores the JadedBelles
+/// session when one is stored, then always continues to the main menu — guests can play
+/// without an account, and signing in is optional.
+/// </summary>
 public class AuthManager : MonoBehaviour
 {
     private CountdownTimer showLogoTimer;
-    private float LogoDuration = 3f;
+    private const float LogoDuration = 3f;
 
-    /*[SerializeField] private GooglePlaySignInCode googlePlaySignInCode;*/
+    private bool sessionCheckDone;
+    private bool menuLoaded;
 
     private void Awake()
     {
@@ -20,15 +24,30 @@ public class AuthManager : MonoBehaviour
 
     private void Start()
     {
-        showLogoTimer.OnTimerStop += async () =>
-        {
-            Debug.Log("Logo duration ended.");
-            await Task.Delay(500);
-            await SignInCachedUserAsync();
-        };
+        showLogoTimer.OnTimerStop += TryEnterGame;
 
-        long currentTime = TimeUtils.UnixNow;
-        Debug.Log(currentTime.ToString());
+        if (TokenStore.HasSession())
+        {
+            JadedBellesApiClient.Instance.RefreshToken(
+                _ =>
+                {
+                    Debug.Log("JadedBelles session restored.");
+                    sessionCheckDone = true;
+                    TryEnterGame();
+                },
+                error =>
+                {
+                    Debug.Log($"Stored session could not be restored ({error}). Continuing as guest.");
+                    TokenStore.Clear();
+                    sessionCheckDone = true;
+                    TryEnterGame();
+                });
+        }
+        else
+        {
+            Debug.Log("No stored session. Continuing as guest.");
+            sessionCheckDone = true;
+        }
     }
 
     private void Update()
@@ -36,36 +55,12 @@ public class AuthManager : MonoBehaviour
         showLogoTimer.Tick(Time.deltaTime);
     }
 
-    private async Task SignInCachedUserAsync()
+    private void TryEnterGame()
     {
-        if (showLogoTimer.isRunning)
+        if (menuLoaded || showLogoTimer.isRunning || !sessionCheckDone)
             return;
 
-        try
-        {
-            if (AuthenticationService.Instance.IsSignedIn)
-            {
-                Debug.Log("User is already signed in.");
-                SceneManager.LoadScene("MainMenu");
-            }
-            else if (AuthenticationService.Instance.SessionTokenExists)
-            {
-                Debug.Log("Attempting to sign in with cached session...");
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
-                SceneManager.LoadScene("MainMenu");
-            }
-            else
-            {
-                Debug.Log("No session found. You may need to trigger Google Play Sign-In or a new anonymous sign-in.");
-            }
-        }
-        catch (AuthenticationException ex)
-        {
-            Debug.LogError("Auth Exception: " + ex.Message);
-        }
-        catch (RequestFailedException ex)
-        {
-            Debug.LogError("Request Failed: " + ex.Message);
-        }
+        menuLoaded = true;
+        SceneManager.LoadScene("MainMenu");
     }
 }

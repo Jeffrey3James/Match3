@@ -73,10 +73,9 @@ public class LevelEditorRuntime : MonoBehaviour
         }
     }
 
-    public void InstantiateLevelShaperEditor(LevelShaperSOGroups shaper)
+    public void InstantiateLevelShaperEditor(List<Vector2Int> positions)
     {
         activeLevelShaperGroups.Clear(); // Clear previous level shaper groups
-        var positions = shaper.GetPositions();
 
         for (int i = 0; i < positions.Count; i++)
         {

@@ -2,12 +2,12 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 using System.Threading.Tasks;
-using Unity.Services.Authentication;
-using Unity.Services.Core;
 using System;
 using System.ComponentModel;
 using System.Collections.Generic;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 
 namespace StroTheGoat
 {
@@ -83,28 +83,6 @@ namespace StroTheGoat
             if (task.IsFaulted)
             {
                 Debug.LogException(task.Exception);
-            }
-        }
-    }
-
-    public static class UnityServicesInitializer
-    {
-        public static bool IsSignedIn => AuthenticationService.Instance.IsSignedIn;
-        public static async Task InitializeAndSignInAsync()
-        {
-            try
-            {
-                await UnityServices.InitializeAsync();
-
-                if (!AuthenticationService.Instance.IsSignedIn)
-                {
-                    await AuthenticationService.Instance.SignInAnonymouslyAsync();
-                    Debug.Log("✅ Signed in anonymously as: " + AuthenticationService.Instance.PlayerId);
-                }
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError("❌ Unity Services Init Failed: " + e.Message);
             }
         }
     }
@@ -373,6 +351,7 @@ namespace StroTheGoat
 
     #region Editor Utils
 
+#if UNITY_EDITOR
     public static class EditorUtils
     {
         public static void CreateLabelAndConfigure(string labelName, GUIStyle guiStyle, Color color)
@@ -395,5 +374,6 @@ namespace StroTheGoat
             GUILayout.Space(spaceToAdd);
         }
     }
+#endif
     #endregion
 }
