@@ -532,10 +532,30 @@ namespace Match3Game
                 gem.Select();
                 AudioManager.instance.PlayClick();
             }
-            else
+            else if (IsAdjacent(selectedGem, gridPos))
             {
                 StartCoroutine(RunGameLoop(selectedGem, gridPos));
             }
+            else
+            {
+                // Second click is not orthogonally adjacent to the currently selected gem.
+                // Treat it as re-selecting the new gem rather than an illegal long-distance swap.
+                var previousGem = grid2.GetValue(selectedGem.x, selectedGem.y)?.GetGem();
+                if (previousGem != null) previousGem.Deselect();
+
+                SelectGem(gridPos);
+                gem.Select();
+                AudioManager.instance.PlayClick();
+            }
+        }
+
+        // True only when b is directly left, right, above, or below a (Manhattan distance == 1).
+        // Diagonals and same-cell are rejected.
+        private static bool IsAdjacent(Vector2Int a, Vector2Int b)
+        {
+            int dx = Mathf.Abs(a.x - b.x);
+            int dy = Mathf.Abs(a.y - b.y);
+            return (dx == 1 && dy == 0) || (dx == 0 && dy == 1);
         }
 
         #endregion
