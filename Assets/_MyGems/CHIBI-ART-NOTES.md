@@ -1,0 +1,21 @@
+# Xandria Gem Jam — Chibi Art Preservation Notes
+
+- `HeartGem.png` — Preserve the faceted heart silhouette, warm golden-yellow center highlights, orange-red body, deep crimson/magenta lower-right shading, and bright jewel shine.
+- `squareGem.png` — Preserve the chunky beveled square/box silhouette, luminous cyan/aqua faces, dark royal-blue corners, tiny pale inclusions, and star-shaped glints.
+- `CircleGem.png` — Preserve the round cabochon silhouette, saturated violet/lavender body, dark purple lower shading, magenta rim, and broad white upper-left reflection.
+- `TriangleGem.png` — Preserve the tall cut triangular-pyramid silhouette, hot pink/fuchsia faces, pale pink/white facets, and deep plum-purple base shadows.
+- `GreenTriangleGem.png` — Preserve the inverted triangular crystal silhouette, lime-green lit facets, emerald midtones, near-black forest-green shadows, and white star glint.
+- `butterflyGem.png` — Preserve the symmetrical butterfly silhouette: orange/yellow upper wing tips, cyan/blue upper wing panels, purple/magenta lower wings, dark plum body, and amber accents.
+- `Obstacles/Mushroom (Obstacle).png` — Preserve the oversized scarlet-to-rust red cap with irregular cream spots, broad dark brown gills, pale beige stem, and surrounding grass.
+- `Obstacles/Vine - Obstacle.png` — Preserve the tangled thorny bramble silhouette, layered olive/forest-green stems, sharp dark thorns, and hazardous overgrown mood.
+- `Powerups/Flower(Bomb).png` — Preserve the blue-violet blossom/bomb silhouette, cyan white-hot center, deep navy lower petals, lavender upper petals, and small green stem/bud.
+- `Powerups/Vine(Rocket-Horizontal).png` — Preserve the right-facing teal/green arrowhead rocket, leafy bark-and-vine wreath, blue underside accents, and open circular framing.
+- `Powerups/Vine(Rocket-Vertical).png` — Preserve the upward-facing teal/green arrowhead rocket, leaf-wrapped vine ring, brown twig curls, and blue/green faceted rocket panels.
+- `Powerups/Acorn(Hammer).png` — Preserve the squat cracked acorn/boulder silhouette, glowing orange-gold central cap, dark brown nut shell, pale tan dripping rim, blue-grey rocks, and roots.
+- `Powerups/Crossbow(Missile).png` — Preserve the large teal diamond-shaped crossbow/missile, brown crossed wooden braces, small red/orange/purple arrowhead tips, and leafy vine surround.
+- `Powerups/ForestEmble(Nuke - ButterflyGem).png` — Preserve the forest crest frame (golden pointed wood arch, green leaves, twigs) and the butterfly gem’s blue/cyan, purple/magenta, and warm orange color story in the central crystal blast.
+- `Powerups/ForestEmblem(Nuke - PinkTriangleGem).png` — Preserve the forest crest frame and a central bright pink/fuchsia crystal burst with pale pink highlights and purple accents, keyed to the pink triangle gem.
+- `Powerups/ForestEmblem(Nuke - CircleGem).png` — Preserve the forest crest frame and a central violet/lavender crystal burst with deep purple facets, keyed to the circle gem.
+- `Powerups/ForestEmble(Nuke - SquareGem).png` — Preserve the forest crest frame and a central cyan/aqua-to-deep-blue crystal burst, keyed to the square gem.
+- `Powerups/ForestEmble(Nuke - GreenTriangleGem).png` — Preserve the forest crest frame and a central lime/emerald crystal burst with dark forest-green facets, keyed to the green triangle gem.
+- `Powerups/ForestEmble(Nuke - HearGem).png` — Preserve the forest crest frame and a central warm yellow/orange/red crystal burst with crimson/magenta facets, keyed to the heart gem.

@@ -1,0 +1,24 @@
+Xandria Gem Jam Chibi Art Verification
+Expected PNGs: 19
+Verified PNGs: 19
+Issues: 0
+
+PASS | CircleGem.png | 1024x1024 | RGBA | transparent=True
+PASS | GreenTriangleGem.png | 1024x1024 | RGBA | transparent=True
+PASS | HeartGem.png | 1024x1024 | RGBA | transparent=True
+PASS | Obstacles/Mushroom (Obstacle).png | 1024x1024 | RGBA | transparent=True
+PASS | Obstacles/Vine - Obstacle.png | 1024x1024 | RGBA | transparent=True
+PASS | Powerups/Acorn(Hammer).png | 1024x1024 | RGBA | transparent=True
+PASS | Powerups/Crossbow(Missile).png | 1024x1024 | RGBA | transparent=True
+PASS | Powerups/Flower(Bomb).png | 1024x1024 | RGBA | transparent=True
+PASS | Powerups/ForestEmble(Nuke - ButterflyGem).png | 1024x1024 | RGBA | transparent=True
+PASS | Powerups/ForestEmble(Nuke - GreenTriangleGem).png | 1024x1024 | RGBA | transparent=True
+PASS | Powerups/ForestEmble(Nuke - HearGem).png | 1024x1024 | RGBA | transparent=True
+PASS | Powerups/ForestEmble(Nuke - SquareGem).png | 1024x1024 | RGBA | transparent=True
+PASS | Powerups/ForestEmblem(Nuke - CircleGem).png | 1024x1024 | RGBA | transparent=True
+PASS | Powerups/ForestEmblem(Nuke - PinkTriangleGem).png | 1024x1024 | RGBA | transparent=True
+PASS | Powerups/Vine(Rocket-Horizontal).png | 1024x1024 | RGBA | transparent=True
+PASS | Powerups/Vine(Rocket-Vertical).png | 1024x1024 | RGBA | transparent=True
+PASS | TriangleGem.png | 1024x1024 | RGBA | transparent=True
+PASS | butterflyGem.png | 1024x1024 | RGBA | transparent=True
+PASS | squareGem.png | 1024x1024 | RGBA | transparent=True
