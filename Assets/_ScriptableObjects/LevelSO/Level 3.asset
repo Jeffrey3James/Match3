@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 852d47d6eaad3b3438c910b0f5274331, type: 3}
+  m_Name: Level 3
+  m_EditorClassIdentifier: 
+  levelName: Level 3
+  maxMoves: 18
+  width: 9
+  height: 13
+  levelShaperPrefab: {fileID: 4721474454762117021, guid: 4b279beb88af4a24ab18306b35ee0edd, type: 3}
+  positionsToExclude: []
+  gemClearObjectives: []
+  obstaclesConfigs:
+  - obstacle: {fileID: 11400000, guid: a0616f92485943142b05dd30e5da4477, type: 2}
+    locations:
+    - {x: 2, y: 6}
+    - {x: 1, y: 8}
+    - {x: 5, y: 10}
+    - {x: 6, y: 5}
+    - {x: 8, y: 4}
+    health: 2
