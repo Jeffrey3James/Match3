@@ -25,14 +25,26 @@ namespace JadedBelles.Networking
         public string refreshToken;
     }
 
+    /// <summary>Generic save request without optimistic-concurrency metadata.</summary>
     [Serializable]
-    public class Match3SaveRequest
+    public class PutGameSaveRequest
     {
-        public string playerName;
-        public int playerLevel;
-        public int playerLives;
-        public int playerCoins;
-        public long playerLifeCountdown;
+        public string saveData;
+        public int schemaVersion;
+        public string label;
+    }
+
+    /// <summary>
+    /// Separate type so JsonUtility omits baseRevision completely when no revision is known.
+    /// JsonUtility cannot reliably represent nullable fields across all Unity targets.
+    /// </summary>
+    [Serializable]
+    public class PutGameSaveWithRevisionRequest
+    {
+        public string saveData;
+        public int schemaVersion;
+        public string label;
+        public int baseRevision;
     }
 
     // ---------- Response payloads ----------
@@ -61,14 +73,14 @@ namespace JadedBelles.Networking
     }
 
     [Serializable]
-    public class Match3SaveData
+    public class GameSaveData
     {
-        public string playerName;
-        public int playerLevel;
-        public int playerLives;
-        public int playerCoins;
-        public long playerLifeCountdown;
+        public int slot;
+        public string label;
+        public int schemaVersion;
+        public int revision;
         public string updatedAt;
+        public string saveData;
     }
 
     // ---------- Response envelopes (ApiResponse<T> from the JadedBelles API) ----------
@@ -104,11 +116,20 @@ namespace JadedBelles.Networking
         public UserData data;
     }
 
+    /// <summary>List response wrapper; JsonUtility requires arrays to be members of an object.</summary>
     [Serializable]
-    public class ApiResponseMatch3Save
+    public class ApiResponseGameSaves
     {
         public bool success;
         public string message;
-        public Match3SaveData data;
+        public GameSaveData[] data;
+    }
+
+    [Serializable]
+    public class ApiResponseGameSave
+    {
+        public bool success;
+        public string message;
+        public GameSaveData data;
     }
 }

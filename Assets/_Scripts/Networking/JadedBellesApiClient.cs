@@ -14,6 +14,9 @@ namespace JadedBelles.Networking
     {
         public const string BaseUrl = "https://api.jadedbelles.com";
 
+        // Seeded match-3 product slug. Change this one value if Xandria Gem Jam uses a different production product.
+        public const string GameProductSlug = "match3-quest";
+
         private const int RequestTimeoutSeconds = 30;
 
         private static JadedBellesApiClient instance;
@@ -131,12 +134,13 @@ namespace JadedBelles.Networking
             StartCoroutine(GetRawRoutine("/api/v1/match3/levels", onSuccess, onError));
         }
 
-        /// <summary>Fetch (or create on first call) the signed-in player's match3 save.</summary>
-        public void GetMatch3Save(Action<ApiResponseMatch3Save> onSuccess, Action<string> onError)
+        // ---------- Generic game saves ----------
+
+        public void GetSaves(string slug, Action<ApiResponseGameSaves> onSuccess, Action<string> onError)
         {
-            StartCoroutine(SendRequest<ApiResponseMatch3Save>(
+            StartCoroutine(SendRequest<ApiResponseGameSaves>(
                 UnityWebRequest.kHttpVerbGET,
-                "/api/v1/match3/me/save",
+                "/api/v1/games/" + slug + "/saves",
                 null,
                 true,
                 true,
@@ -144,13 +148,65 @@ namespace JadedBelles.Networking
                 onError));
         }
 
-        /// <summary>Persist the signed-in player's match3 save.</summary>
-        public void PutMatch3Save(Match3SaveRequest body, Action<ApiResponseMatch3Save> onSuccess, Action<string> onError)
+        public void GetSave(string slug, int slot, Action<ApiResponseGameSave> onSuccess, Action<string> onError)
         {
-            StartCoroutine(SendRequest<ApiResponseMatch3Save>(
+            StartCoroutine(SendRequest<ApiResponseGameSave>(
+                UnityWebRequest.kHttpVerbGET,
+                "/api/v1/games/" + slug + "/saves/" + slot,
+                null,
+                true,
+                true,
+                onSuccess,
+                onError));
+        }
+
+        /// <summary>
+        /// Upserts a generic game save. A 409 conflict invokes onConflict with the server's
+        /// current slot instead of being reported as a generic transport failure.
+        /// </summary>
+        public void PutSave(
+            string slug,
+            int slot,
+            string saveData,
+            int schemaVersion,
+            string label,
+            int? baseRevision,
+            Action<ApiResponseGameSave> onSuccess,
+            Action<ApiResponseGameSave> onConflict,
+            Action<string> onError)
+        {
+            string jsonBody = baseRevision.HasValue
+                ? JsonUtility.ToJson(new PutGameSaveWithRevisionRequest
+                {
+                    saveData = saveData,
+                    schemaVersion = schemaVersion,
+                    label = label,
+                    baseRevision = baseRevision.Value
+                })
+                : JsonUtility.ToJson(new PutGameSaveRequest
+                {
+                    saveData = saveData,
+                    schemaVersion = schemaVersion,
+                    label = label
+                });
+
+            StartCoroutine(SendRequest<ApiResponseGameSave>(
                 UnityWebRequest.kHttpVerbPUT,
-                "/api/v1/match3/me/save",
-                JsonUtility.ToJson(body),
+                "/api/v1/games/" + slug + "/saves/" + slot,
+                jsonBody,
+                true,
+                true,
+                onSuccess,
+                onError,
+                onConflict));
+        }
+
+        public void DeleteSave(string slug, int slot, Action<ApiResponsePlain> onSuccess, Action<string> onError)
+        {
+            StartCoroutine(SendRequest<ApiResponsePlain>(
+                UnityWebRequest.kHttpVerbDELETE,
+                "/api/v1/games/" + slug + "/saves/" + slot,
+                null,
                 true,
                 true,
                 onSuccess,
@@ -220,7 +276,8 @@ namespace JadedBelles.Networking
             bool requiresAuthentication,
             bool retryUnauthorized,
             Action<T> onSuccess,
-            Action<string> onError)
+            Action<string> onError,
+            Action<T> onConflict = null)
         {
             if (requiresAuthentication && string.IsNullOrEmpty(TokenStore.GetAccessToken()))
             {
@@ -261,13 +318,27 @@ namespace JadedBelles.Networking
                         true,
                         false,
                         onSuccess,
-                        onError));
+                        onError,
+                        onConflict));
                     yield break;
                 }
 
                 onError?.Invoke(string.IsNullOrEmpty(refreshError)
                     ? "Your session has expired. Please sign in again."
                     : refreshError);
+                yield break;
+            }
+
+            if (responseCode == 409 && onConflict != null)
+            {
+                T conflict = JsonUtility.FromJson<T>(responseText);
+                if (conflict == null)
+                {
+                    onError?.Invoke("The server returned an unreadable save conflict.");
+                    yield break;
+                }
+
+                onConflict?.Invoke(conflict);
                 yield break;
             }
 
@@ -318,7 +389,8 @@ namespace JadedBelles.Networking
             if (response is ApiResponseAuth auth) return auth.success;
             if (response is ApiResponseRefresh refresh) return refresh.success;
             if (response is ApiResponseUser user) return user.success;
-            if (response is ApiResponseMatch3Save save) return save.success;
+            if (response is ApiResponseGameSaves saves) return saves.success;
+            if (response is ApiResponseGameSave save) return save.success;
             return false;
         }
 
@@ -328,7 +400,8 @@ namespace JadedBelles.Networking
             if (response is ApiResponseAuth auth) return auth.message;
             if (response is ApiResponseRefresh refresh) return refresh.message;
             if (response is ApiResponseUser user) return user.message;
-            if (response is ApiResponseMatch3Save save) return save.message;
+            if (response is ApiResponseGameSaves saves) return saves.message;
+            if (response is ApiResponseGameSave save) return save.message;
             return null;
         }
 
