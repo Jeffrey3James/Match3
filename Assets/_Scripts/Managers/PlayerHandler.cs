@@ -3,7 +3,6 @@ using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 using StroTheGoat;
 using System;
-using Unity.Services.CloudSave;
 
 public class PlayerHandler : MonoBehaviour
 {
@@ -42,8 +41,37 @@ public class PlayerHandler : MonoBehaviour
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         Debug.Log($"Scene Loaded: {scene.name}");
+
+        if (LevelHandler.instance == null)
+        {
+            Debug.LogWarning("LevelHandler is not available yet; the current level will be set once levels load.");
+            return;
+        }
+
+        if (LevelHandler.instance.LevelsReady)
+        {
+            SetCurrentLevelFromCatalog();
+        }
+        else
+        {
+            LevelHandler.instance.OnLevelsReady += SetCurrentLevelFromCatalog;
+        }
+    }
+
+    private void SetCurrentLevelFromCatalog()
+    {
+        LevelHandler.instance.OnLevelsReady -= SetCurrentLevelFromCatalog;
+
         List<Level> allLevels = LevelHandler.instance.GetAllLevels();
-        playerCurrentLevel = allLevels[playerData.playerLevel];
+        if (allLevels.Count == 0)
+        {
+            Debug.LogError("The level catalog is empty; cannot set the current level.");
+            return;
+        }
+
+        int levelIndex = playerData != null ? playerData.playerLevel : 0;
+        levelIndex = Mathf.Clamp(levelIndex, 0, allLevels.Count - 1);
+        playerCurrentLevel = allLevels[levelIndex];
     }
 
     public Level GetCurrentLevel()
@@ -129,12 +157,11 @@ public class PlayerHandler : MonoBehaviour
         #endregion
     }
     
-    private async void CalculateNewLife()
+    private void CalculateNewLife()
     {
-        var data = new Dictionary<string, object>();
         long newLifeTime = TimeUtils.UnixNow + (long)timeToRegainALife;
-        data["playerLifeCountdown"] = newLifeTime;
-        await CloudSaveService.Instance.Data.Player.SaveAsync(data);
+        playerData.playerLifeCountdown = newLifeTime;
+        _ = PlayerDataManager.instance.UpdatePlayerData();
     }
 
     public void AddALifeToPlayer()

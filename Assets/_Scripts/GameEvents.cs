@@ -45,7 +45,7 @@ public class GameEvents
     public async Task PlayerDataSaved()
     {
         Debug.Log("Player Data Saved Triggered");
-        await CloudSaveManager.instance.UpdatePlayerData();
+        await PlayerDataManager.instance.UpdatePlayerData();
 
         onPlayerDataSaved?.Invoke();
     }

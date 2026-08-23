@@ -1,0 +1,1386 @@
+{
+  "version": 1,
+  "levels": [
+    {
+      "id": 0,
+      "name": "Level 0",
+      "maxMoves": 15,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [
+        {
+          "gemType": "CircleGem",
+          "amount": 5
+        }
+      ],
+      "obstacles": []
+    },
+    {
+      "id": 1,
+      "name": "Level 1",
+      "maxMoves": 18,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [
+        {
+          "x": 0,
+          "y": 12
+        },
+        {
+          "x": 1,
+          "y": 12
+        },
+        {
+          "x": 0,
+          "y": 11
+        },
+        {
+          "x": 0,
+          "y": 10
+        },
+        {
+          "x": 1,
+          "y": 11
+        },
+        {
+          "x": 2,
+          "y": 12
+        }
+      ],
+      "objectives": [],
+      "obstacles": [
+        {
+          "type": "Mushroom",
+          "health": 3,
+          "cells": [
+            {
+              "x": 2,
+              "y": 4
+            },
+            {
+              "x": 4,
+              "y": 7
+            },
+            {
+              "x": 6,
+              "y": 10
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Level 2",
+      "maxMoves": 18,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": [
+        {
+          "type": "Grass",
+          "health": 3,
+          "cells": [
+            {
+              "x": 5,
+              "y": 9
+            },
+            {
+              "x": 2,
+              "y": 5
+            },
+            {
+              "x": 2,
+              "y": 10
+            },
+            {
+              "x": 7,
+              "y": 8
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Level 3",
+      "maxMoves": 18,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": [
+        {
+          "type": "Ice",
+          "health": 2,
+          "cells": [
+            {
+              "x": 2,
+              "y": 6
+            },
+            {
+              "x": 1,
+              "y": 8
+            },
+            {
+              "x": 5,
+              "y": 10
+            },
+            {
+              "x": 6,
+              "y": 5
+            },
+            {
+              "x": 8,
+              "y": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Level 4",
+      "maxMoves": 18,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": [
+        {
+          "type": "WitheredVine",
+          "health": 3,
+          "cells": [
+            {
+              "x": 3,
+              "y": 8
+            },
+            {
+              "x": 3,
+              "y": 9
+            },
+            {
+              "x": 4,
+              "y": 8
+            },
+            {
+              "x": 4,
+              "y": 9
+            },
+            {
+              "x": 7,
+              "y": 2
+            },
+            {
+              "x": 7,
+              "y": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Level 5",
+      "maxMoves": 18,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": [
+        {
+          "type": "Bubble",
+          "health": 10,
+          "cells": [
+            {
+              "x": 2,
+              "y": 5
+            },
+            {
+              "x": 4,
+              "y": 6
+            },
+            {
+              "x": 8,
+              "y": 7
+            },
+            {
+              "x": 3,
+              "y": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Level 6",
+      "maxMoves": 25,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [
+        {
+          "gemType": "SquareGem",
+          "amount": 10
+        }
+      ],
+      "obstacles": [
+        {
+          "type": "Bubble",
+          "health": 5,
+          "cells": [
+            {
+              "x": 4,
+              "y": 6
+            },
+            {
+              "x": 3,
+              "y": 6
+            }
+          ]
+        },
+        {
+          "type": "Grass",
+          "health": 5,
+          "cells": [
+            {
+              "x": 5,
+              "y": 11
+            },
+            {
+              "x": 6,
+              "y": 11
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Level 7",
+      "maxMoves": 25,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 2
+        },
+        {
+          "x": 1,
+          "y": 1
+        },
+        {
+          "x": 2,
+          "y": 0
+        }
+      ],
+      "objectives": [],
+      "obstacles": [
+        {
+          "type": "Ice",
+          "health": 6,
+          "cells": [
+            {
+              "x": 1,
+              "y": 10
+            },
+            {
+              "x": 7,
+              "y": 10
+            },
+            {
+              "x": 1,
+              "y": 1
+            },
+            {
+              "x": 7,
+              "y": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Level 8",
+      "maxMoves": 25,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [
+        {
+          "x": 4,
+          "y": 4
+        },
+        {
+          "x": 4,
+          "y": 3
+        },
+        {
+          "x": 3,
+          "y": 3
+        },
+        {
+          "x": 3,
+          "y": 2
+        },
+        {
+          "x": 2,
+          "y": 2
+        },
+        {
+          "x": 2,
+          "y": 1
+        },
+        {
+          "x": 1,
+          "y": 1
+        },
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 4,
+          "y": 8
+        },
+        {
+          "x": 4,
+          "y": 9
+        },
+        {
+          "x": 3,
+          "y": 9
+        },
+        {
+          "x": 3,
+          "y": 10
+        },
+        {
+          "x": 2,
+          "y": 10
+        },
+        {
+          "x": 2,
+          "y": 11
+        },
+        {
+          "x": 1,
+          "y": 11
+        },
+        {
+          "x": 1,
+          "y": 12
+        },
+        {
+          "x": 0,
+          "y": 12
+        }
+      ],
+      "objectives": [
+        {
+          "gemType": "HeartGem",
+          "amount": 15
+        },
+        {
+          "gemType": "ButterflyGem",
+          "amount": 15
+        }
+      ],
+      "obstacles": []
+    },
+    {
+      "id": 9,
+      "name": "Level 9",
+      "maxMoves": 25,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [
+        {
+          "x": 8,
+          "y": 8
+        },
+        {
+          "x": 7,
+          "y": 7
+        },
+        {
+          "x": 6,
+          "y": 6
+        },
+        {
+          "x": 5,
+          "y": 5
+        },
+        {
+          "x": 4,
+          "y": 4
+        },
+        {
+          "x": 3,
+          "y": 3
+        },
+        {
+          "x": 2,
+          "y": 2
+        },
+        {
+          "x": 1,
+          "y": 1
+        },
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 8
+        },
+        {
+          "x": 1,
+          "y": 7
+        },
+        {
+          "x": 2,
+          "y": 6
+        },
+        {
+          "x": 3,
+          "y": 5
+        },
+        {
+          "x": 5,
+          "y": 3
+        },
+        {
+          "x": 6,
+          "y": 2
+        },
+        {
+          "x": 7,
+          "y": 1
+        },
+        {
+          "x": 8,
+          "y": 0
+        }
+      ],
+      "objectives": [],
+      "obstacles": [
+        {
+          "type": "WitheredVine",
+          "health": 9,
+          "cells": [
+            {
+              "x": 4,
+              "y": 9
+            },
+            {
+              "x": 3,
+              "y": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Level 10",
+      "maxMoves": 25,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [
+        {
+          "x": 6,
+          "y": 12
+        },
+        {
+          "x": 5,
+          "y": 12
+        },
+        {
+          "x": 4,
+          "y": 12
+        },
+        {
+          "x": 3,
+          "y": 12
+        },
+        {
+          "x": 2,
+          "y": 12
+        },
+        {
+          "x": 8,
+          "y": 10
+        },
+        {
+          "x": 7,
+          "y": 11
+        },
+        {
+          "x": 1,
+          "y": 11
+        },
+        {
+          "x": 0,
+          "y": 10
+        },
+        {
+          "x": 7,
+          "y": 9
+        },
+        {
+          "x": 6,
+          "y": 8
+        },
+        {
+          "x": 5,
+          "y": 7
+        },
+        {
+          "x": 3,
+          "y": 7
+        },
+        {
+          "x": 2,
+          "y": 8
+        },
+        {
+          "x": 1,
+          "y": 9
+        }
+      ],
+      "objectives": [],
+      "obstacles": [
+        {
+          "type": "Ice",
+          "health": 5,
+          "cells": [
+            {
+              "x": 4,
+              "y": 7
+            }
+          ]
+        },
+        {
+          "type": "Grass",
+          "health": 5,
+          "cells": [
+            {
+              "x": 5,
+              "y": 6
+            }
+          ]
+        },
+        {
+          "type": "Ice",
+          "health": 5,
+          "cells": [
+            {
+              "x": 4,
+              "y": 5
+            }
+          ]
+        },
+        {
+          "type": "Grass",
+          "health": 5,
+          "cells": [
+            {
+              "x": 3,
+              "y": 6
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "Level 11",
+      "maxMoves": 25,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [
+        {
+          "x": 8,
+          "y": 8
+        },
+        {
+          "x": 7,
+          "y": 7
+        },
+        {
+          "x": 6,
+          "y": 6
+        },
+        {
+          "x": 5,
+          "y": 5
+        },
+        {
+          "x": 4,
+          "y": 4
+        },
+        {
+          "x": 3,
+          "y": 3
+        },
+        {
+          "x": 2,
+          "y": 2
+        },
+        {
+          "x": 1,
+          "y": 1
+        },
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 8
+        },
+        {
+          "x": 1,
+          "y": 7
+        },
+        {
+          "x": 2,
+          "y": 6
+        },
+        {
+          "x": 3,
+          "y": 5
+        },
+        {
+          "x": 5,
+          "y": 3
+        },
+        {
+          "x": 6,
+          "y": 2
+        },
+        {
+          "x": 7,
+          "y": 1
+        },
+        {
+          "x": 8,
+          "y": 0
+        }
+      ],
+      "objectives": [
+        {
+          "gemType": "HeartGem",
+          "amount": 12
+        }
+      ],
+      "obstacles": [
+        {
+          "type": "Mushroom",
+          "health": 6,
+          "cells": [
+            {
+              "x": 5,
+              "y": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "name": "Level 12",
+      "maxMoves": 15,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": [
+        {
+          "type": "Bubble",
+          "health": 5,
+          "cells": [
+            {
+              "x": 6,
+              "y": 12
+            },
+            {
+              "x": 7,
+              "y": 12
+            },
+            {
+              "x": 8,
+              "y": 12
+            },
+            {
+              "x": 6,
+              "y": 11
+            },
+            {
+              "x": 7,
+              "y": 11
+            },
+            {
+              "x": 8,
+              "y": 11
+            },
+            {
+              "x": 6,
+              "y": 10
+            },
+            {
+              "x": 7,
+              "y": 10
+            },
+            {
+              "x": 8,
+              "y": 10
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "Level 13",
+      "maxMoves": 15,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [
+        {
+          "x": 8,
+          "y": 9
+        },
+        {
+          "x": 7,
+          "y": 10
+        },
+        {
+          "x": 6,
+          "y": 11
+        },
+        {
+          "x": 5,
+          "y": 12
+        },
+        {
+          "x": 4,
+          "y": 12
+        },
+        {
+          "x": 3,
+          "y": 12
+        },
+        {
+          "x": 2,
+          "y": 11
+        },
+        {
+          "x": 1,
+          "y": 10
+        },
+        {
+          "x": 0,
+          "y": 9
+        }
+      ],
+      "objectives": [],
+      "obstacles": [
+        {
+          "type": "Mushroom",
+          "health": 8,
+          "cells": [
+            {
+              "x": 0,
+              "y": 12
+            },
+            {
+              "x": 1,
+              "y": 12
+            },
+            {
+              "x": 2,
+              "y": 12
+            },
+            {
+              "x": 0,
+              "y": 11
+            },
+            {
+              "x": 1,
+              "y": 11
+            },
+            {
+              "x": 0,
+              "y": 10
+            }
+          ]
+        },
+        {
+          "type": "Bubble",
+          "health": 8,
+          "cells": [
+            {
+              "x": 6,
+              "y": 12
+            },
+            {
+              "x": 7,
+              "y": 12
+            },
+            {
+              "x": 8,
+              "y": 12
+            },
+            {
+              "x": 7,
+              "y": 11
+            },
+            {
+              "x": 8,
+              "y": 11
+            },
+            {
+              "x": 8,
+              "y": 10
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "name": "Level 14",
+      "maxMoves": 25,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [
+        {
+          "x": 0,
+          "y": 12
+        },
+        {
+          "x": 1,
+          "y": 12
+        },
+        {
+          "x": 0,
+          "y": 11
+        },
+        {
+          "x": 0,
+          "y": 10
+        },
+        {
+          "x": 1,
+          "y": 11
+        },
+        {
+          "x": 2,
+          "y": 12
+        }
+      ],
+      "objectives": [
+        {
+          "gemType": "HeartGem",
+          "amount": 5
+        }
+      ],
+      "obstacles": [
+        {
+          "type": "Grass",
+          "health": 5,
+          "cells": [
+            {
+              "x": 2,
+              "y": 12
+            },
+            {
+              "x": 3,
+              "y": 12
+            },
+            {
+              "x": 4,
+              "y": 12
+            },
+            {
+              "x": 5,
+              "y": 12
+            },
+            {
+              "x": 6,
+              "y": 12
+            },
+            {
+              "x": 3,
+              "y": 11
+            },
+            {
+              "x": 4,
+              "y": 11
+            },
+            {
+              "x": 5,
+              "y": 11
+            },
+            {
+              "x": 4,
+              "y": 10
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "name": "Level 15",
+      "maxMoves": 12,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [
+        {
+          "x": 4,
+          "y": 4
+        },
+        {
+          "x": 4,
+          "y": 3
+        },
+        {
+          "x": 3,
+          "y": 3
+        },
+        {
+          "x": 3,
+          "y": 2
+        },
+        {
+          "x": 2,
+          "y": 2
+        },
+        {
+          "x": 2,
+          "y": 1
+        },
+        {
+          "x": 1,
+          "y": 1
+        },
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 4,
+          "y": 8
+        },
+        {
+          "x": 4,
+          "y": 9
+        },
+        {
+          "x": 3,
+          "y": 9
+        },
+        {
+          "x": 3,
+          "y": 10
+        },
+        {
+          "x": 2,
+          "y": 10
+        },
+        {
+          "x": 2,
+          "y": 11
+        },
+        {
+          "x": 1,
+          "y": 11
+        },
+        {
+          "x": 1,
+          "y": 12
+        },
+        {
+          "x": 0,
+          "y": 12
+        }
+      ],
+      "objectives": [
+        {
+          "gemType": "TriangleGem",
+          "amount": 30
+        }
+      ],
+      "obstacles": []
+    },
+    {
+      "id": 16,
+      "name": "Level 16",
+      "maxMoves": 22,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [
+        {
+          "x": 8,
+          "y": 3
+        },
+        {
+          "x": 7,
+          "y": 3
+        },
+        {
+          "x": 6,
+          "y": 3
+        },
+        {
+          "x": 5,
+          "y": 3
+        },
+        {
+          "x": 4,
+          "y": 3
+        },
+        {
+          "x": 3,
+          "y": 3
+        },
+        {
+          "x": 2,
+          "y": 3
+        },
+        {
+          "x": 1,
+          "y": 3
+        },
+        {
+          "x": 0,
+          "y": 3
+        },
+        {
+          "x": 8,
+          "y": 9
+        },
+        {
+          "x": 7,
+          "y": 9
+        },
+        {
+          "x": 6,
+          "y": 9
+        },
+        {
+          "x": 5,
+          "y": 9
+        },
+        {
+          "x": 4,
+          "y": 9
+        },
+        {
+          "x": 3,
+          "y": 9
+        },
+        {
+          "x": 2,
+          "y": 9
+        },
+        {
+          "x": 1,
+          "y": 9
+        },
+        {
+          "x": 0,
+          "y": 9
+        }
+      ],
+      "objectives": [],
+      "obstacles": [
+        {
+          "type": "Bubble",
+          "health": 5,
+          "cells": [
+            {
+              "x": 3,
+              "y": 7
+            },
+            {
+              "x": 4,
+              "y": 7
+            },
+            {
+              "x": 5,
+              "y": 7
+            },
+            {
+              "x": 3,
+              "y": 6
+            },
+            {
+              "x": 4,
+              "y": 6
+            },
+            {
+              "x": 5,
+              "y": 6
+            },
+            {
+              "x": 3,
+              "y": 5
+            },
+            {
+              "x": 4,
+              "y": 5
+            },
+            {
+              "x": 5,
+              "y": 5
+            }
+          ]
+        },
+        {
+          "type": "Grass",
+          "health": 5,
+          "cells": [
+            {
+              "x": 2,
+              "y": 8
+            },
+            {
+              "x": 3,
+              "y": 8
+            },
+            {
+              "x": 4,
+              "y": 8
+            },
+            {
+              "x": 5,
+              "y": 8
+            },
+            {
+              "x": 6,
+              "y": 8
+            },
+            {
+              "x": 6,
+              "y": 7
+            },
+            {
+              "x": 6,
+              "y": 6
+            },
+            {
+              "x": 6,
+              "y": 5
+            },
+            {
+              "x": 6,
+              "y": 4
+            },
+            {
+              "x": 5,
+              "y": 4
+            },
+            {
+              "x": 4,
+              "y": 4
+            },
+            {
+              "x": 3,
+              "y": 4
+            },
+            {
+              "x": 2,
+              "y": 4
+            },
+            {
+              "x": 2,
+              "y": 5
+            },
+            {
+              "x": 2,
+              "y": 6
+            },
+            {
+              "x": 2,
+              "y": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "name": "Level 17",
+      "maxMoves": 28,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": [
+        {
+          "type": "Mushroom",
+          "health": 6,
+          "cells": [
+            {
+              "x": 8,
+              "y": 8
+            },
+            {
+              "x": 7,
+              "y": 7
+            },
+            {
+              "x": 7,
+              "y": 6
+            },
+            {
+              "x": 8,
+              "y": 5
+            }
+          ]
+        },
+        {
+          "type": "Mushroom",
+          "health": 6,
+          "cells": [
+            {
+              "x": 0,
+              "y": 8
+            },
+            {
+              "x": 1,
+              "y": 7
+            },
+            {
+              "x": 1,
+              "y": 6
+            },
+            {
+              "x": 0,
+              "y": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "name": "Level 5",
+      "maxMoves": 15,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": []
+    },
+    {
+      "id": 19,
+      "name": "Level 6",
+      "maxMoves": 15,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": []
+    },
+    {
+      "id": 20,
+      "name": "Level 7",
+      "maxMoves": 15,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": []
+    },
+    {
+      "id": 21,
+      "name": "Level 8",
+      "maxMoves": 15,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": []
+    },
+    {
+      "id": 22,
+      "name": "Level 9",
+      "maxMoves": 15,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": []
+    },
+    {
+      "id": 23,
+      "name": "Level 10",
+      "maxMoves": 15,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": []
+    },
+    {
+      "id": 24,
+      "name": "Level 11",
+      "maxMoves": 15,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": []
+    },
+    {
+      "id": 25,
+      "name": "Level 12",
+      "maxMoves": 15,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": []
+    },
+    {
+      "id": 26,
+      "name": "Level 13",
+      "maxMoves": 15,
+      "width": 9,
+      "height": 13,
+      "excludedCells": [],
+      "objectives": [],
+      "obstacles": []
+    }
+  ]
+}

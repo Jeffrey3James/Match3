@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fcf1d707eb4b4548b76a05843727021c, type: 3}
+  m_Name: GemTypeRegistry
+  m_EditorClassIdentifier: 
+  gemTypes:
+  - {fileID: 11400000, guid: c3ed56c8dd540504bb0c15a5a2f9d32b, type: 2}
+  - {fileID: 11400000, guid: ee19a115642c810458f2c9d37f6dbdaf, type: 2}
+  - {fileID: 11400000, guid: e10c6a591e2b93d4299b0dfc5ecbce7a, type: 2}
+  - {fileID: 11400000, guid: 8b1a5a9b552b2734883b99fe385b5935, type: 2}
+  - {fileID: 11400000, guid: 117d70c55518ed14d898463649457032, type: 2}
+  - {fileID: 11400000, guid: 629b4e617f9373043a1fc569c0286a98, type: 2}
+  obstacles:
+  - {fileID: 11400000, guid: 1a6b9b6009c8f7f4184eefe0f45acb34, type: 2}
+  - {fileID: 11400000, guid: 472801d0e1b19d74fa0af04caf0cb5fd, type: 2}
+  - {fileID: 11400000, guid: a0616f92485943142b05dd30e5da4477, type: 2}
+  - {fileID: 11400000, guid: e454afbde213d234b8a5636bc88acbbd, type: 2}
+  - {fileID: 11400000, guid: bf518ce08569315458644c22a25c542d, type: 2}
+  levelShaperPrefab: {fileID: 4721474454762117021, guid: 4b279beb88af4a24ab18306b35ee0edd, type: 3}

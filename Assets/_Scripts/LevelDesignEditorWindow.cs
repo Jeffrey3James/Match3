@@ -1,37 +1,39 @@
+#if UNITY_EDITOR
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Match3Game;
+using Match3Game.Levels;
+using StroTheGoat;
 using UnityEditor;
 using UnityEngine;
-using Match3Game;
-using System.Collections.Generic;
-using StroTheGoat;
 
+/// <summary>
+/// Data-driven level editor. Reads and writes Assets/Resources/Levels/levels.json —
+/// the same file the game bundles as a fallback and the JadedBelles API serves remotely.
+/// Publishing a level = editing the JSON here, then uploading it to the API's App_Data.
+/// </summary>
 public class LevelDesignEditorWindow : EditorWindow
 {
+    private const string LevelsJsonPath = "Assets/Resources/Levels/levels.json";
+
     #region Fields
     private LevelEditorRuntime runtimeHost;
     private Vector2 scrollPos;
 
-    private Level currentLevel;
-    private LevelShaperSO currentShaper;
-    private LevelShaperSO lastShaper; // Track changes
-    private Vector2Int gridSize;
-    private int maxMoves;
+    private LevelCollection collection;
+    private int selectedLevelIndex;
+
+    private GemTypeRegistry registry;
+    private string[] gemNames = new string[0];
+    private string[] obstacleNames = new string[0];
+
     private float cellSize = .55f;
     private Vector3 originPosition = new Vector3(1, -1, 0);
-    private string newLevelShaperName = "NewLevelShaper";
 
-    private SerializedObject serializedLevel;
-    private SerializedProperty obstaclesProperty;
-    private SerializedProperty objectivesProperty;
-    private SerializedProperty levelShaperProperty;
-
-    // Level Shaper Groups
-    private List<LevelShaperSOGroups> groups = new List<LevelShaperSOGroups>();
-    private List<SerializedObject> serializedGroups = new List<SerializedObject>();
-    private List<SerializedProperty> positionsProperties = new List<SerializedProperty>();
-
-    // Button timing
-    private double lastButtonClickTime = 0;
-    private const double BUTTON_COOLDOWN = 0.3;
+    private bool showExcludedCells = true;
+    private bool showObstacles = true;
+    private bool showObjectives = true;
     #endregion
 
     [MenuItem("Tools/Level Design Editor")]
@@ -40,744 +42,405 @@ public class LevelDesignEditorWindow : EditorWindow
         GetWindow<LevelDesignEditorWindow>("Level Design Editor");
     }
 
+    private void OnEnable()
+    {
+        LoadRegistry();
+        LoadCollection();
+    }
+
     private void OnGUI()
     {
-        scrollPos = GUILayout.BeginScrollView(scrollPos, true, true);
+        scrollPos = GUILayout.BeginScrollView(scrollPos, false, true);
 
         DrawHeader();
-        DrawLevelConfiguration();
-        DrawGridControls();
 
-        if (currentLevel != null)
+        if (collection == null)
         {
-            DrawLevelContent();
+            EditorGUILayout.HelpBox($"Could not load {LevelsJsonPath}. Click Reload to try again.", MessageType.Error);
+            GUILayout.EndScrollView();
+            return;
+        }
+
+        DrawLevelSelector();
+
+        var level = GetSelectedLevel();
+        if (level != null)
+        {
+            DrawLevelFields(level);
+            DrawExcludedCells(level);
+            DrawObstacles(level);
+            DrawObjectives(level);
+            DrawScenePreviewControls(level);
         }
         else
         {
-            EditorGUILayout.HelpBox("Select a Level asset to edit.", MessageType.Info);
+            EditorGUILayout.HelpBox("Add a level to get started.", MessageType.Info);
         }
+
+        EditorUtils.AddSpaceToGUI(15);
+        DrawSaveBar();
 
         GUILayout.EndScrollView();
     }
 
-    #region Main Drawing Methods
+    #region Loading / Saving
+    private void LoadRegistry()
+    {
+        registry = GemTypeRegistry.Load();
+        if (registry == null) return;
+
+        gemNames = registry.GetGemTypes().Where(g => g != null).Select(g => g.name).ToArray();
+        obstacleNames = registry.GetObstacles().Where(o => o != null).Select(o => o.name).ToArray();
+    }
+
+    private void LoadCollection()
+    {
+        if (!File.Exists(LevelsJsonPath))
+        {
+            collection = new LevelCollection { version = 1 };
+            return;
+        }
+
+        try
+        {
+            collection = JsonUtility.FromJson<LevelCollection>(File.ReadAllText(LevelsJsonPath));
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Failed to parse {LevelsJsonPath}: {e.Message}");
+            collection = null;
+        }
+
+        selectedLevelIndex = Mathf.Clamp(selectedLevelIndex, 0, (collection?.levels.Count ?? 1) - 1);
+    }
+
+    private void SaveCollection()
+    {
+        if (collection == null) return;
+
+        // Keep ids sequential and unique so the game's ordering stays predictable.
+        for (int i = 0; i < collection.levels.Count; i++)
+            collection.levels[i].id = i + 1;
+
+        File.WriteAllText(LevelsJsonPath, JsonUtility.ToJson(collection, true));
+        AssetDatabase.Refresh();
+        Debug.Log($"Saved {collection.levels.Count} levels to {LevelsJsonPath}. " +
+                  "Remember to publish this file to the API (App_Data/match3-levels.json) to ship it remotely.");
+    }
+    #endregion
+
+    #region Drawing
     private void DrawHeader()
     {
         GUIStyle centeredStyle = EditorUtils.CenteredStyle(18);
-        GUILayout.Label("Level Editor", centeredStyle);
+        GUILayout.Label("Level Editor (levels.json)", centeredStyle);
 
         runtimeHost = (LevelEditorRuntime)EditorGUILayout.ObjectField(
             "Runtime Host", runtimeHost, typeof(LevelEditorRuntime), true);
-    }
 
-    private void DrawLevelConfiguration()
-    {
-        currentLevel = (Level)EditorGUILayout.ObjectField(
-            "Level", currentLevel, typeof(Level), false);
-
-        EditorUtils.AddSpaceToGUI(10);
-
-        maxMoves = EditorGUILayout.IntField("Max Moves", maxMoves);
-        gridSize = EditorGUILayout.Vector2IntField("Grid Size", gridSize);
-
-        if (currentLevel != null)
+        if (registry == null)
         {
-            SyncSerializedLevel();
+            EditorGUILayout.HelpBox("GemTypeRegistry.asset not found in Resources. Gem/obstacle popups will be empty.", MessageType.Warning);
         }
     }
 
-    private void DrawGridControls()
+    private void DrawLevelSelector()
     {
         EditorUtils.AddSpaceToGUI(10);
+
+        EditorGUILayout.BeginHorizontal();
+
+        string[] levelNames = collection.levels
+            .Select((l, i) => $"{i + 1}: {(string.IsNullOrEmpty(l.name) ? "(unnamed)" : l.name)}")
+            .ToArray();
+
+        if (levelNames.Length > 0)
+        {
+            selectedLevelIndex = EditorGUILayout.Popup("Level", Mathf.Clamp(selectedLevelIndex, 0, levelNames.Length - 1), levelNames);
+        }
+        else
+        {
+            EditorGUILayout.LabelField("Level", "(none)");
+        }
+
+        if (GUILayout.Button("Add", GUILayout.Width(50)))
+        {
+            var newLevel = new LevelData
+            {
+                name = $"Level {collection.levels.Count + 1}",
+                maxMoves = 15,
+                width = 9,
+                height = 13
+            };
+            collection.levels.Add(newLevel);
+            selectedLevelIndex = collection.levels.Count - 1;
+        }
+
+        using (new EditorGUI.DisabledScope(collection.levels.Count == 0))
+        {
+            if (GUILayout.Button("Duplicate", GUILayout.Width(75)))
+            {
+                var source = collection.levels[selectedLevelIndex];
+                var copy = JsonUtility.FromJson<LevelData>(JsonUtility.ToJson(source));
+                copy.name = source.name + " Copy";
+                collection.levels.Insert(selectedLevelIndex + 1, copy);
+                selectedLevelIndex++;
+            }
+
+            if (GUILayout.Button("Delete", GUILayout.Width(60)) &&
+                EditorUtility.DisplayDialog("Delete Level",
+                    $"Delete '{collection.levels[selectedLevelIndex].name}'?", "Delete", "Cancel"))
+            {
+                collection.levels.RemoveAt(selectedLevelIndex);
+                selectedLevelIndex = Mathf.Clamp(selectedLevelIndex, 0, collection.levels.Count - 1);
+            }
+        }
+
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void DrawLevelFields(LevelData level)
+    {
+        EditorUtils.AddSpaceToGUI(10);
+
+        level.name = EditorGUILayout.TextField("Name", level.name);
+        level.maxMoves = Mathf.Max(1, EditorGUILayout.IntField("Max Moves", level.maxMoves));
+
+        Vector2Int size = EditorGUILayout.Vector2IntField("Grid Size", new Vector2Int(level.width, level.height));
+        level.width = Mathf.Max(1, size.x);
+        level.height = Mathf.Max(1, size.y);
+    }
+
+    private void DrawExcludedCells(LevelData level)
+    {
+        EditorUtils.AddSpaceToGUI(10);
+        showExcludedCells = EditorGUILayout.Foldout(showExcludedCells, $"Excluded Cells (Level Shape) — {level.excludedCells.Count}", true);
+        if (!showExcludedCells) return;
+
+        DrawCellList(level.excludedCells, level);
+    }
+
+    private void DrawObstacles(LevelData level)
+    {
+        EditorUtils.AddSpaceToGUI(10);
+        showObstacles = EditorGUILayout.Foldout(showObstacles, $"Obstacles — {level.obstacles.Count}", true);
+        if (!showObstacles) return;
+
+        for (int i = 0; i < level.obstacles.Count; i++)
+        {
+            var obstacle = level.obstacles[i];
+
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.BeginHorizontal();
+            obstacle.type = DrawNamePopup("Type", obstacle.type, obstacleNames);
+            if (GUILayout.Button("X", GUILayout.Width(22)))
+            {
+                level.obstacles.RemoveAt(i);
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.EndVertical();
+                return;
+            }
+            EditorGUILayout.EndHorizontal();
+
+            obstacle.health = Mathf.Max(1, EditorGUILayout.IntField("Health", obstacle.health));
+
+            EditorGUILayout.LabelField($"Cells ({obstacle.cells.Count})");
+            DrawCellList(obstacle.cells, level);
+            EditorGUILayout.EndVertical();
+        }
+
+        if (GUILayout.Button("Add Obstacle"))
+        {
+            level.obstacles.Add(new ObstacleData
+            {
+                type = obstacleNames.Length > 0 ? obstacleNames[0] : "",
+                health = 1
+            });
+        }
+    }
+
+    private void DrawObjectives(LevelData level)
+    {
+        EditorUtils.AddSpaceToGUI(10);
+        showObjectives = EditorGUILayout.Foldout(showObjectives, $"Objectives — {level.objectives.Count}", true);
+        if (!showObjectives) return;
+
+        string[] allTargetNames = gemNames.Concat(obstacleNames).ToArray();
+
+        for (int i = 0; i < level.objectives.Count; i++)
+        {
+            var objective = level.objectives[i];
+
+            EditorGUILayout.BeginHorizontal("box");
+            objective.gemType = DrawNamePopup("Clear", objective.gemType, allTargetNames);
+            objective.amount = Mathf.Max(1, EditorGUILayout.IntField("Amount", objective.amount));
+            if (GUILayout.Button("X", GUILayout.Width(22)))
+            {
+                level.objectives.RemoveAt(i);
+                EditorGUILayout.EndHorizontal();
+                return;
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        if (GUILayout.Button("Add Objective"))
+        {
+            level.objectives.Add(new ObjectiveData
+            {
+                gemType = allTargetNames.Length > 0 ? allTargetNames[0] : "",
+                amount = 10
+            });
+        }
+    }
+
+    private void DrawCellList(List<CellData> cells, LevelData level)
+    {
+        for (int i = 0; i < cells.Count; i++)
+        {
+            EditorGUILayout.BeginHorizontal();
+            var current = cells[i];
+            Vector2Int edited = EditorGUILayout.Vector2IntField(GUIContent.none, new Vector2Int(current.x, current.y));
+            current.x = Mathf.Clamp(edited.x, 0, level.width - 1);
+            current.y = Mathf.Clamp(edited.y, 0, level.height - 1);
+            if (GUILayout.Button("X", GUILayout.Width(22)))
+            {
+                cells.RemoveAt(i);
+                EditorGUILayout.EndHorizontal();
+                return;
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        if (GUILayout.Button("Add Cell"))
+        {
+            cells.Add(new CellData(0, 0));
+        }
+    }
+
+    private string DrawNamePopup(string label, string currentValue, string[] options)
+    {
+        if (options.Length == 0)
+        {
+            return EditorGUILayout.TextField(label, currentValue);
+        }
+
+        int currentIndex = System.Array.IndexOf(options, currentValue);
+        if (currentIndex < 0) currentIndex = 0;
+        int newIndex = EditorGUILayout.Popup(label, currentIndex, options);
+        return options[newIndex];
+    }
+
+    private void DrawSaveBar()
+    {
+        EditorGUILayout.BeginHorizontal();
+
+        if (GUILayout.Button("Save levels.json", GUILayout.Height(30)))
+        {
+            SaveCollection();
+        }
+
+        if (GUILayout.Button("Reload", GUILayout.Width(70), GUILayout.Height(30)))
+        {
+            LoadRegistry();
+            LoadCollection();
+        }
+
+        EditorGUILayout.EndHorizontal();
+    }
+    #endregion
+
+    #region Scene Preview
+    private void DrawScenePreviewControls(LevelData level)
+    {
+        EditorUtils.AddSpaceToGUI(15);
+        GUIStyle centeredStyle = EditorUtils.CenteredStyle(14);
+        EditorUtils.CreateLabelAndConfigure("Scene Preview (LevelConfigScene)", centeredStyle, Color.cyan);
 
         if (GUILayout.Button("Draw Level in Scene"))
         {
             if (ValidateRuntimeHost())
             {
-                ClearGridEditorWindow();
-                DrawLevelGridEditorWindow();
+                ClearGridEditorWindow(level);
+                DrawLevelGridEditorWindow(level);
+                ApplyLevelShapePreview(level);
+                ApplyObstaclesPreview(level);
             }
         }
     }
 
-    private void DrawLevelContent()
-    {
-        GUIStyle centeredStyle = EditorUtils.CenteredStyle(18);
-
-        DrawLevelShaperGroups(centeredStyle);
-        DrawObstacleConfig(centeredStyle);
-        DrawObjectives(centeredStyle);
-        DrawLevelShaperSO(centeredStyle);
-
-        EditorUtils.AddSpaceToGUI(10);
-        if (GUILayout.Button("Save Changes"))
-        {
-            SaveAllChanges();
-        }
-    }
-    #endregion
-
-    #region Level Shaper Groups
-    private void DrawLevelShaperGroups(GUIStyle guiStyle)
-    {
-        EditorUtils.AddSpaceToGUI(10);
-        EditorUtils.CreateLabelAndConfigure("Level Shaper Groups", guiStyle, Color.cyan);
-
-        // Shaper name input
-        newLevelShaperName = EditorGUILayout.TextField("New Shaper Name", newLevelShaperName);
-
-        // Current shaper selection
-        EditorGUI.BeginChangeCheck();
-        currentShaper = (LevelShaperSO)EditorGUILayout.ObjectField(
-            "Current Level Shaper", currentShaper, typeof(LevelShaperSO), false);
-
-        if (EditorGUI.EndChangeCheck() || currentShaper != lastShaper)
-        {
-            RefreshGroupsFromShaper();
-            lastShaper = currentShaper;
-        }
-
-        DrawExistingGroups();
-        DrawShaperGroupButtons();
-    }
-
-    private void RefreshGroupsFromShaper()
-    {
-        ClearGroupLists();
-
-        if (currentShaper != null)
-        {
-            var positionGroups = currentShaper.GetPositionGroups();
-            foreach (var group in positionGroups)
-            {
-                if (group != null) // Only add valid groups
-                {
-                    AddGroupToEditor(group);
-                }
-            }
-        }
-    }
-
-    private void DrawExistingGroups()
-    {
-        EditorUtils.AddSpaceToGUI(10);
-
-        for (int i = groups.Count - 1; i >= 0; i--) // Iterate backwards for safe removal
-        {
-            if (DrawSingleGroup(i))
-            {
-                // Group was removed, continue to next
-                continue;
-            }
-        }
-    }
-
-    private bool DrawSingleGroup(int index)
-    {
-        GUILayout.BeginVertical("box");
-        GUILayout.Label($"Level Shaper Group {index + 1}", EditorStyles.boldLabel);
-
-        // Group asset field
-        EditorGUI.BeginChangeCheck();
-        LevelShaperSOGroups newGroup = (LevelShaperSOGroups)EditorGUILayout.ObjectField(
-            "Group Asset", groups[index], typeof(LevelShaperSOGroups), false);
-
-        if (EditorGUI.EndChangeCheck())
-        {
-            UpdateGroupAtIndex(index, newGroup);
-        }
-
-        bool groupRemoved = false;
-
-        if (groups[index] != null && IsGroupValid(index))
-        {
-            DrawGroupPositions(index);
-            groupRemoved = DrawGroupActionButtons(index);
-        }
-        else if (groups[index] == null)
-        {
-            EditorGUILayout.HelpBox("Drag a LevelShaperSOGroups asset here to configure its positions", MessageType.Info);
-            groupRemoved = DrawEmptySlotButtons(index);
-        }
-
-        GUILayout.EndVertical();
-        EditorUtils.AddSpaceToGUI(5);
-
-        return groupRemoved;
-    }
-
-    private void DrawGroupPositions(int index)
-    {
-        if (!IsGroupValid(index)) return;
-
-        serializedGroups[index].Update();
-
-        EditorGUILayout.LabelField("Excluded Positions:", EditorStyles.boldLabel);
-
-        var positionsProperty = positionsProperties[index];
-
-        // Array size control
-        int newSize = EditorGUILayout.IntField("Size", positionsProperty.arraySize);
-        if (newSize != positionsProperty.arraySize && newSize >= 0)
-        {
-            positionsProperty.arraySize = newSize;
-        }
-
-        // Draw individual positions
-        EditorGUI.indentLevel++;
-        for (int j = positionsProperty.arraySize - 1; j >= 0; j--)
-        {
-            DrawSinglePosition(positionsProperty, j);
-        }
-        EditorGUI.indentLevel--;
-
-        // Add new position button
-        GUI.backgroundColor = Color.green;
-        if (GUILayout.Button("Add New Position"))
-        {
-            AddNewPosition(positionsProperty);
-        }
-        GUI.backgroundColor = Color.white;
-
-        // Show positions info
-        var positions = groups[index].GetPositions();
-        EditorGUILayout.HelpBox($"This group excludes {positions.Count} position(s)", MessageType.Info);
-
-        serializedGroups[index].ApplyModifiedProperties();
-    }
-
-    private void DrawSinglePosition(SerializedProperty positionsProperty, int positionIndex)
-    {
-        GUILayout.BeginHorizontal();
-
-        SerializedProperty positionElement = positionsProperty.GetArrayElementAtIndex(positionIndex);
-
-        GUILayout.Label($"Pos {positionIndex}:", GUILayout.Width(50));
-
-        Vector2Int currentPos = positionElement.vector2IntValue;
-        Vector2Int newPos = EditorGUILayout.Vector2IntField("", currentPos);
-        if (newPos != currentPos)
-        {
-            positionElement.vector2IntValue = newPos;
-        }
-
-        // Delete button
-        GUI.backgroundColor = Color.red;
-        if (GUILayout.Button("�", GUILayout.Width(25)))
-        {
-            positionsProperty.DeleteArrayElementAtIndex(positionIndex);
-        }
-        GUI.backgroundColor = Color.white;
-
-        GUILayout.EndHorizontal();
-    }
-
-    private bool DrawGroupActionButtons(int index)
-    {
-        EditorUtils.AddSpaceToGUI(5);
-        GUILayout.BeginHorizontal();
-
-        // Post to scene
-        GUI.backgroundColor = Color.cyan;
-        if (GUILayout.Button("Post to Scene"))
-        {
-            PostSingleGroupToScene(index);
-        }
-
-        // Add to shaper
-        GUI.backgroundColor = Color.yellow;
-        if (GUILayout.Button("Add to Shaper"))
-        {
-            AddGroupToCurrentShaper(index);
-        }
-
-        // Remove from editor
-        GUI.backgroundColor = Color.red;
-        bool removed = false;
-        if (GUILayout.Button("Remove"))
-        {
-            RemoveGroupFromEditor(index);
-            removed = true;
-        }
-
-        GUI.backgroundColor = Color.white;
-        GUILayout.EndHorizontal();
-
-        return removed;
-    }
-
-    private bool DrawEmptySlotButtons(int index)
-    {
-        GUILayout.BeginHorizontal();
-
-        GUI.backgroundColor = Color.red;
-        bool removed = false;
-        if (GUILayout.Button("Remove Empty Slot"))
-        {
-            RemoveGroupFromEditor(index);
-            removed = true;
-        }
-
-        GUI.backgroundColor = Color.white;
-        GUILayout.EndHorizontal();
-
-        return removed;
-    }
-
-    private void DrawShaperGroupButtons()
-    {
-        EditorUtils.AddSpaceToGUI(10);
-
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Create New Group"))
-        {
-            CreateAndAddNewGroup();
-        }
-        if (GUILayout.Button("Add Empty Slot") && CanClickButton())
-        {
-            AddEmptySlot();
-        }
-        GUILayout.EndHorizontal();
-
-        EditorUtils.AddSpaceToGUI(5);
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Post All Groups"))
-        {
-            PostAllGroupsToScene();
-        }
-        if (GUILayout.Button("Clear All Groups"))
-        {
-            ClearGroupLists();
-        }
-        if (GUILayout.Button("Create New Shaper"))
-        {
-            CreateNewShaper();
-        }
-        GUILayout.EndHorizontal();
-    }
-    #endregion
-
-    #region Group Management
-    private void AddGroupToEditor(LevelShaperSOGroups group)
-    {
-        groups.Add(group);
-
-        if (group != null)
-        {
-            SerializedObject so = new SerializedObject(group);
-            serializedGroups.Add(so);
-            positionsProperties.Add(so.FindProperty("levelShaperSOs"));
-        }
-        else
-        {
-            serializedGroups.Add(null);
-            positionsProperties.Add(null);
-        }
-    }
-
-    private void UpdateGroupAtIndex(int index, LevelShaperSOGroups newGroup)
-    {
-        groups[index] = newGroup;
-
-        EnsureListCapacity(index);
-
-        if (newGroup != null)
-        {
-            serializedGroups[index] = new SerializedObject(newGroup);
-            positionsProperties[index] = serializedGroups[index].FindProperty("levelShaperSOs");
-        }
-        else
-        {
-            serializedGroups[index] = null;
-            positionsProperties[index] = null;
-        }
-    }
-
-    private void RemoveGroupFromEditor(int index)
-    {
-        if (index >= 0 && index < groups.Count)
-        {
-            groups.RemoveAt(index);
-
-            if (index < serializedGroups.Count)
-                serializedGroups.RemoveAt(index);
-
-            if (index < positionsProperties.Count)
-                positionsProperties.RemoveAt(index);
-        }
-    }
-
-    private void AddGroupToCurrentShaper(int index)
-    {
-        if (!IsValidGroupIndex(index)) return;
-
-        if (currentShaper == null)
-        {
-            currentShaper = CreateNewLevelShaper();
-            if (currentShaper == null) return;
-        }
-
-        var group = groups[index];
-        var shaperGroups = currentShaper.GetPositionGroups();
-        if (!shaperGroups.Contains(group))
-        {
-            shaperGroups.Add(group);
-            EditorUtility.SetDirty(currentShaper);
-            AssetDatabase.SaveAssets();
-            Debug.Log($"Added group {group.name} to shaper {currentShaper.name}");
-        }
-        else
-        {
-            Debug.LogWarning("Group is already in the shaper");
-        }
-    }
-
-    private void CreateAndAddNewGroup()
-    {
-        string path = EditorUtility.SaveFilePanelInProject(
-            "Save Level Shaper Group",
-            "NewLevelShaperGroup",
-            "asset",
-            "Choose location to save Level Shaper SO Group"
-        );
-
-        if (!string.IsNullOrEmpty(path))
-        {
-            LevelShaperSOGroups newGroup = CreateInstance<LevelShaperSOGroups>();
-            AssetDatabase.CreateAsset(newGroup, path);
-            AssetDatabase.SaveAssets();
-            AddGroupToEditor(newGroup);
-        }
-    }
-
-    private void AddEmptySlot()
-    {
-        AddGroupToEditor(null);
-        Debug.Log($"Added empty slot. Total slots: {groups.Count}");
-    }
-
-    private void ClearGroupLists()
-    {
-        groups.Clear();
-        serializedGroups.Clear();
-        positionsProperties.Clear();
-    }
-    #endregion
-
-    #region Scene Operations
-    private void PostSingleGroupToScene(int index)
-    {
-        if (ValidateRuntimeHost() && IsValidGroupIndex(index))
-        {
-            var group = groups[index];
-            runtimeHost.InstantiateLevelShaperEditor(group);
-            Debug.Log($"Posted group {group.name} to scene");
-        }
-    }
-
-    private void PostAllGroupsToScene()
-    {
-        if (!ValidateRuntimeHost()) return;
-
-        // Clear existing
-        foreach (var activeShaper in runtimeHost.activeLevelShaperGroups)
-        {
-            if (activeShaper != null)
-            {
-                runtimeHost.ClearGem(activeShaper.x, activeShaper.y);
-                runtimeHost.CreateGem(activeShaper.x, activeShaper.y);
-            }
-        }
-
-        // Post all groups
-        foreach (var group in groups)
-        {
-            if (group != null)
-            {
-                runtimeHost.InstantiateLevelShaperEditor(group);
-            }
-        }
-    }
-    #endregion
-
-    #region Level Shaper SO Management
-    private void DrawLevelShaperSO(GUIStyle guiStyle)
-    {
-        EditorUtils.AddSpaceToGUI(10);
-        EditorUtils.CreateLabelAndConfigure("Level Shapers", guiStyle, Color.cyan);
-
-        if (currentLevel != null && levelShaperProperty != null)
-        {
-            EditorGUILayout.PropertyField(levelShaperProperty, new GUIContent("Level Shapers"), true);
-            serializedLevel.ApplyModifiedProperties();
-        }
-        else
-        {
-            EditorGUILayout.HelpBox("No Level Shaper assigned to this level.", MessageType.Warning);
-        }
-    }
-
-    private LevelShaperSO CreateNewLevelShaper()
-    {
-        if (string.IsNullOrEmpty(newLevelShaperName))
-        {
-            Debug.LogWarning("Please enter a name for the new shaper");
-            return null;
-        }
-
-        LevelShaperSO newSO = ScriptableObject.CreateInstance<LevelShaperSO>();
-        string path = $"Assets/_ScriptableObjects/LevelShapers/{newLevelShaperName}.asset";
-        path = AssetDatabase.GenerateUniqueAssetPath(path);
-
-        AssetDatabase.CreateAsset(newSO, path);
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        Debug.Log($"Created new Level Shaper: {path}");
-        return newSO;
-    }
-
-    private void CreateNewShaper()
-    {
-        var newShaper = CreateNewLevelShaper();
-        if (newShaper != null)
-        {
-            currentShaper = newShaper;
-        }
-    }
-    #endregion
-
-    #region Other Configurations
-    private void DrawObstacleConfig(GUIStyle guiStyle)
-    {
-        EditorUtils.AddSpaceToGUI(10);
-        EditorUtils.CreateLabelAndConfigure("Obstacle Config", guiStyle, Color.cyan);
-
-        if (currentLevel != null && obstaclesProperty != null)
-        {
-            EditorGUILayout.PropertyField(obstaclesProperty, new GUIContent("Obstacles"), true);
-            UpdateObstacles();
-            serializedLevel.ApplyModifiedProperties();
-        }
-    }
-
-    private void DrawObjectives(GUIStyle guiStyle)
-    {
-        EditorUtils.AddSpaceToGUI(10);
-        EditorUtils.CreateLabelAndConfigure("Objectives Config", guiStyle, Color.cyan);
-
-        if (currentLevel != null && objectivesProperty != null)
-        {
-            EditorGUILayout.PropertyField(objectivesProperty, new GUIContent("Objectives"), true);
-            serializedLevel.ApplyModifiedProperties();
-        }
-    }
-    #endregion
-
-    #region Grid Operations
-    private void DrawLevelGridEditorWindow()
+    private void DrawLevelGridEditorWindow(LevelData level)
     {
         bool shouldDrawDebug = GameObject.Find("Debugging") == null;
 
         runtimeHost.gridToConfigure = GridSystem2D<GridObj>.VerticalGrid(
-            gridSize.x, gridSize.y, cellSize, originPosition, shouldDrawDebug);
+            level.width, level.height, cellSize, originPosition, shouldDrawDebug);
 
-        for (int x = 0; x < gridSize.x; x++)
+        for (int x = 0; x < level.width; x++)
         {
-            for (int y = 0; y < gridSize.y; y++)
+            for (int y = 0; y < level.height; y++)
             {
                 runtimeHost.CreateGem(x, y);
             }
         }
     }
 
-    private void ClearGridEditorWindow()
+    private void ClearGridEditorWindow(LevelData level)
     {
-        for (int x = 0; x < gridSize.x; x++)
+        if (runtimeHost.gridToConfigure == null) return;
+
+        for (int x = 0; x < level.width; x++)
         {
-            for (int y = 0; y < gridSize.y; y++)
+            for (int y = 0; y < level.height; y++)
             {
                 runtimeHost.ClearGem(x, y);
             }
         }
-    }
-    #endregion
 
-    #region Utility Methods
-    private void SyncSerializedLevel()
-    {
-        if (serializedLevel == null || serializedLevel.targetObject != currentLevel)
-        {
-            serializedLevel = new SerializedObject(currentLevel);
-            obstaclesProperty = serializedLevel.FindProperty("obstaclesConfigs");
-            objectivesProperty = serializedLevel.FindProperty("gemClearObjectives");
-            levelShaperProperty = serializedLevel.FindProperty("positionsToExclude");
-        }
-        serializedLevel.Update();
+        runtimeHost.spawnedObstacles.Clear();
     }
 
-    private void SaveAllChanges()
+    private void ApplyLevelShapePreview(LevelData level)
     {
-        if (currentLevel != null)
+        var positions = level.excludedCells.Select(c => c.ToVector()).ToList();
+        if (positions.Count > 0)
         {
-            EditorUtility.SetDirty(currentLevel);
-            currentLevel.SetMaxMoves(maxMoves);
-            currentLevel.SetWidth(gridSize.x);
-            currentLevel.SetHeight(gridSize.y);
+            runtimeHost.InstantiateLevelShaperEditor(positions);
         }
+    }
 
-        if (currentShaper != null)
-        {
-            EditorUtility.SetDirty(currentShaper);
-        }
+    private void ApplyObstaclesPreview(LevelData level)
+    {
+        if (registry == null) return;
 
-        foreach (var group in groups)
+        for (int i = 0; i < level.obstacles.Count; i++)
         {
-            if (group != null)
+            var data = level.obstacles[i];
+            var obstacleType = registry.FindObstacle(data.type);
+            if (obstacleType == null) continue;
+
+            var config = new ObstacleConfig
             {
-                EditorUtility.SetDirty(group);
-            }
+                obstacle = obstacleType,
+                locations = data.cells.Select(c => c.ToVector()).ToList(),
+                health = data.health
+            };
+
+            if (!runtimeHost.spawnedObstacles.ContainsKey(i))
+                runtimeHost.spawnedObstacles[i] = new List<GameObject>();
+
+            runtimeHost.InstantiateObstacleConfigEditor(config, i);
         }
-
-        AssetDatabase.SaveAssets();
-        Debug.Log("All changes saved");
-    }
-
-    private void AddNewPosition(SerializedProperty positionsProperty)
-    {
-        positionsProperty.arraySize++;
-        var newElement = positionsProperty.GetArrayElementAtIndex(positionsProperty.arraySize - 1);
-        newElement.vector2IntValue = Vector2Int.zero;
     }
 
     private bool ValidateRuntimeHost()
     {
         if (runtimeHost == null)
         {
-            Debug.LogWarning("Assign a Runtime Host in the Scene first.");
+            Debug.LogWarning("Assign a Runtime Host in the Scene first (open LevelConfigScene).");
             return false;
         }
         return true;
     }
-
-    private bool CanClickButton()
-    {
-        return EditorApplication.timeSinceStartup - lastButtonClickTime > BUTTON_COOLDOWN;
-    }
-
-    private bool IsValidGroupIndex(int index)
-    {
-        return index >= 0 && index < groups.Count && groups[index] != null;
-    }
-
-    private bool IsGroupValid(int index)
-    {
-        return index < serializedGroups.Count &&
-               index < positionsProperties.Count &&
-               serializedGroups[index] != null &&
-               positionsProperties[index] != null;
-    }
-
-    private void EnsureListCapacity(int index)
-    {
-        while (serializedGroups.Count <= index) serializedGroups.Add(null);
-        while (positionsProperties.Count <= index) positionsProperties.Add(null);
-    }
-    #endregion
-
-    #region Obstacle Management
-    private void UpdateObstacles()
-    {
-        if (GUILayout.Button("Update Obstacles"))
-        {
-            if (!ValidateRuntimeHost()) return;
-
-            HashSet<int> currentIds = new HashSet<int>();
-
-            for (int i = 0; i < obstaclesProperty.arraySize; i++)
-            {
-                ProcessObstacleAtIndex(i, currentIds);
-            }
-
-            CleanupRemovedObstacles(currentIds);
-        }
-    }
-
-    private void ProcessObstacleAtIndex(int index, HashSet<int> currentIds)
-    {
-        SerializedProperty element = obstaclesProperty.GetArrayElementAtIndex(index);
-        var obstacleRef = element.FindPropertyRelative("obstacle").objectReferenceValue as Obstacle;
-        var locationsRef = element.FindPropertyRelative("locations");
-        var healthValue = element.FindPropertyRelative("health").intValue;
-
-        List<Vector2Int> locations = new List<Vector2Int>();
-        for (int c = 0; c < locationsRef.arraySize; c++)
-        {
-            SerializedProperty coord = locationsRef.GetArrayElementAtIndex(c);
-            locations.Add(new Vector2Int(
-                coord.FindPropertyRelative("x").intValue,
-                coord.FindPropertyRelative("y").intValue
-            ));
-        }
-
-        ObstacleConfig config = new ObstacleConfig
-        {
-            obstacle = obstacleRef,
-            locations = locations,
-            health = healthValue
-        };
-
-        currentIds.Add(index);
-        ClearOldObstacles(index);
-        runtimeHost.InstantiateObstacleConfigEditor(config, index);
-    }
-
-    private void ClearOldObstacles(int id)
-    {
-        if (runtimeHost.spawnedObstacles.TryGetValue(id, out var oldList))
-        {
-            foreach (var go in oldList)
-            {
-                if (go != null)
-                {
-                    Vector2Int gridPos = runtimeHost.gridToConfigure.GetXY(go.transform.position);
-                    runtimeHost.ClearGem(gridPos.x, gridPos.y);
-                    runtimeHost.CreateGem(gridPos.x, gridPos.y);
-                }
-            }
-            oldList.Clear();
-        }
-        else
-        {
-            runtimeHost.spawnedObstacles[id] = new List<GameObject>();
-        }
-    }
-
-    private void CleanupRemovedObstacles(HashSet<int> currentIds)
-    {
-        List<int> keysToRemove = new List<int>();
-
-        foreach (var kvp in runtimeHost.spawnedObstacles)
-        {
-            if (!currentIds.Contains(kvp.Key))
-            {
-                foreach (var go in kvp.Value)
-                {
-                    if (go != null)
-                    {
-                        Vector2Int gridPos = runtimeHost.gridToConfigure.GetXY(go.transform.position);
-                        runtimeHost.ClearGem(gridPos.x, gridPos.y);
-                        runtimeHost.CreateGem(gridPos.x, gridPos.y);
-                    }
-                }
-                keysToRemove.Add(kvp.Key);
-            }
-        }
-
-        foreach (var key in keysToRemove)
-        {
-            runtimeHost.spawnedObstacles.Remove(key);
-        }
-    }
     #endregion
 }
+#endif

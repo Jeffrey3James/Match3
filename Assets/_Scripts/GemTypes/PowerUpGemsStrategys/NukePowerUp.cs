@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using Match3Game;
-using NUnit.Framework.Internal;
+
 using Unity.VisualScripting;
 
 [CreateAssetMenu(fileName = "NukePowerUp", menuName = "Match3/GemType/NukePowerUp")]
