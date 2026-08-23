@@ -792,6 +792,27 @@ namespace Match3Game
             Debug.Log(percentage);
         }
 
+        /// <summary>
+        /// Rewarded-ad rescue: resumes a board that ended ONLY because the player
+        /// ran out of moves. Grants <paramref name="amount"/> extra moves, clears
+        /// the game-over state, and re-enables input. Returns false (and changes
+        /// nothing) if the board isn't in a moves-exhausted fail state — callers
+        /// must only hide the fail panel when this returns true.
+        /// </summary>
+        public bool TryResumeWithExtraMoves(int amount)
+        {
+            if (amount <= 0 || !isGameOver) return false;
+            if (obstaclesToClear <= 0 && objectivesToClear <= 0) return false; // level was won, not failed
+            if (movesLeft > 0) return false; // failed for some other reason
+
+            movesLeft += amount;
+            isGameOver = false;
+            inputReader.enabled = true;
+            UpdateMovesText();
+            Debug.Log($"Resumed with {amount} extra moves after rewarded ad.");
+            return true;
+        }
+
         private void SetMaxMoves()
         {
             movesLeft = level.GetMaxMoves();
