@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using DG.Tweening;
 using TMPro;
-using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.Timeline;
 using Random = UnityEngine.Random;
@@ -62,20 +61,34 @@ namespace Match3Game
         private System.Action onLevelCompletedAction;
         #endregion
 
+        [Tooltip("Fallback level used when PlayerHandler has no current level (offline, editor play, catalog unreachable).")]
+        [SerializeField] private Level fallbackLevel;
+
         private void Awake()
         {
             inputReader = GetComponent<InputReader>();
+            ResolveLevel();
+        }
 
-            var events = GameEventsManager.instance.gameEvents;
-            /*if (PlayerHandler.instance == null)
+        private void ResolveLevel()
+        {
+            // Prefer the level chosen by PlayerHandler (from the JadedBelles catalog + player progress).
+            if (PlayerHandler.instance != null)
             {
-                
-                Debug.LogError("PlayerHandler instance is null. Ensure PlayerHandler is initialized before Match3.");
+                var playerLevel = PlayerHandler.instance.GetCurrentLevel();
+                if (playerLevel != null)
+                {
+                    level = playerLevel;
+                    return;
+                }
             }
-            else
+
+            // Fall back to a designer-assigned Level asset so the scene still boots offline.
+            if (level == null && fallbackLevel != null)
             {
-                level = PlayerHandler.instance.GetCurrentLevel();
-            }*/
+                level = fallbackLevel;
+                Debug.LogWarning("Match3: using fallbackLevel because PlayerHandler had no current level.");
+            }
         }
 
         private IEnumerator LevelComplete()
@@ -117,6 +130,16 @@ namespace Match3Game
 
         private void Start()
         {
+            // Level may not be set yet if the JadedBelles catalog is still loading.
+            // Re-resolve once, then bail out cleanly instead of NRE'ing on level.GetWidth().
+            if (level == null) ResolveLevel();
+            if (level == null)
+            {
+                Debug.LogError("Match3: no Level is available (PlayerHandler.playerCurrentLevel is null and fallbackLevel is unassigned). Aborting scene boot. Assign a Level asset to Match3.fallbackLevel or make sure the level catalog loads before entering this scene.");
+                enabled = false;
+                return;
+            }
+
             var events = GameEventsManager.instance.gameEvents;
 
             width = level.GetWidth();

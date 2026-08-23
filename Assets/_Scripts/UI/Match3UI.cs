@@ -37,11 +37,20 @@ public class Match3UI : MonoBehaviour
     private void Awake()
     {
         match3 = FindFirstObjectByType<Match3>();
-        level = match3.GetLevel();
+        if (match3 != null) level = match3.GetLevel();
     }
 
     private void Start()
     {
+        // Match3 may have deferred its level resolution to Start; ask again now.
+        if (level == null && match3 != null) level = match3.GetLevel();
+        if (level == null)
+        {
+            Debug.LogWarning("Match3UI: no Level available yet; skipping UI init. Match3 should log the underlying reason.");
+            enabled = false;
+            return;
+        }
+
         var events = GameEventsManager.instance.gameEvents;
         SetupGameOverScreen();
         gameOverWindow.SetActive(false);

@@ -221,6 +221,7 @@ namespace JadedBelles.Networking
             {
                 request.timeout = RequestTimeoutSeconds;
                 request.SetRequestHeader("Accept", "application/json");
+                ApplyEditorCertBypass(request);
                 yield return request.SendWebRequest();
 
                 if (request.result != UnityWebRequest.Result.Success)
@@ -380,8 +381,27 @@ namespace JadedBelles.Networking
             if (requiresAuthentication)
                 request.SetRequestHeader("Authorization", "Bearer " + TokenStore.GetAccessToken());
 
+            ApplyEditorCertBypass(request);
             return request;
         }
+
+        // Editor-only escape hatch for local development when the api.jadedbelles.com
+        // certificate is misconfigured (UnityTls error 7 / cert CN mismatch). NEVER
+        // active in a shipped player build.
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private static void ApplyEditorCertBypass(UnityWebRequest request)
+        {
+            request.certificateHandler = AcceptAllCertificatesHandler.Shared;
+            request.disposeCertificateHandlerOnDispose = false;
+        }
+
+#if UNITY_EDITOR
+        private sealed class AcceptAllCertificatesHandler : CertificateHandler
+        {
+            public static readonly AcceptAllCertificatesHandler Shared = new AcceptAllCertificatesHandler();
+            protected override bool ValidateCertificate(byte[] certificateData) => true;
+        }
+#endif
 
         private static bool WasApiSuccessful<T>(T response)
         {
