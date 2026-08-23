@@ -144,6 +144,13 @@ public class LevelDesignEditorWindow : EditorWindow
         }
     }
 
+    private LevelData GetSelectedLevel()
+    {
+        if (collection?.levels == null || collection.levels.Count == 0) return null;
+        selectedLevelIndex = Mathf.Clamp(selectedLevelIndex, 0, collection.levels.Count - 1);
+        return collection.levels[selectedLevelIndex];
+    }
+
     private void DrawLevelSelector()
     {
         EditorUtils.AddSpaceToGUI(10);
