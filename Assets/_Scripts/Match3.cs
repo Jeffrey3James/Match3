@@ -201,8 +201,19 @@ namespace Match3Game
             }
 
             UpdateMovesLeft();
+            int cascadeGuard = 0;
             do
             {
+                // Safety valve: if a downstream exception ever prevents ExplodeGems from
+                // clearing the matched cells, FindMatches would return the same match
+                // forever and soft-lock the board (this happened on device when a null
+                // AudioSource killed the explode coroutine). Bail out loudly instead.
+                if (++cascadeGuard > 50)
+                {
+                    Debug.LogError("Cascade guard tripped: aborting match loop after 50 iterations. A coroutine is likely throwing before clearing matches.");
+                    break;
+                }
+
                 yield return StartCoroutine(ExplodeGems(matches));
                 SpawnPowerups();
                 yield return StartCoroutine(CheckAllAdjacentObstacles(new HashSet<Vector2Int>(matches)));
@@ -572,8 +583,14 @@ namespace Match3Game
             GameEventsManager.instance.gameEvents.SwapStarted();
 
             List<Vector2Int> newMatches = FindMatches();
+            int cascadeGuard = 0;
             do
             {
+                if (++cascadeGuard > 50)
+                {
+                    Debug.LogError("Cascade guard tripped in powerup loop: aborting after 50 iterations.");
+                    break;
+                }
                 yield return StartCoroutine(ExplodeGems(newMatches));
                 SpawnPowerups();
                 yield return StartCoroutine(MakeGemsFall());
