@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministically generate Xandria Gem Jam's authored level catalog.
+"""Deterministically generate Xandria Gem Adventure's authored level catalog.
 
 The script deliberately reads and retains the first five levels in levels.json before
 replacing the catalog.  Those tutorial records are authored seed data and must stay

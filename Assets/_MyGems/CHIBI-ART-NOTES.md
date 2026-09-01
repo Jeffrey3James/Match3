@@ -1,4 +1,4 @@
-# Xandria Gem Jam — Chibi Art Preservation Notes
+# Xandria Gem Adventure — Chibi Art Preservation Notes
 
 - `HeartGem.png` — Preserve the faceted heart silhouette, warm golden-yellow center highlights, orange-red body, deep crimson/magenta lower-right shading, and bright jewel shine.
 - `squareGem.png` — Preserve the chunky beveled square/box silhouette, luminous cyan/aqua faces, dark royal-blue corners, tiny pale inclusions, and star-shaped glints.

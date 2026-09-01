@@ -1,4 +1,4 @@
-Xandria Gem Jam Chibi Art Verification
+Xandria Gem Adventure Chibi Art Verification
 Expected PNGs: 19
 Verified PNGs: 19
 Issues: 0
