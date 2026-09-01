@@ -51,6 +51,22 @@
             <ui:Label name="user-display" text="" class="auth-user-display" />
             <ui:Label name="user-email"   text="" class="auth-user-email" />
             <ui:Button name="btn-logout"  text="Log out" class="auth-secondary" />
+
+            <!-- Danger zone: Google Play requires an in-app way to request
+                 account deletion whenever the app lets users create an
+                 account. Two-step confirmation (button → confirm button)
+                 so a stray tap can't fire the deletion request. -->
+            <ui:VisualElement name="danger-zone" class="auth-danger-zone">
+                <ui:Label text="Danger zone" class="auth-danger-label" />
+                <ui:Button name="btn-delete-account" text="Delete my account" class="auth-danger" />
+                <ui:VisualElement name="delete-confirm" class="auth-danger-confirm hidden">
+                    <ui:Label text="This will email a confirmation link to your account address. You'll click that link to actually schedule deletion. Personal data is removed immediately after confirmation; the row is permanently purged 30 days later." class="auth-danger-copy" />
+                    <ui:VisualElement class="auth-danger-row">
+                        <ui:Button name="btn-delete-confirm" text="Send confirmation email" class="auth-danger" />
+                        <ui:Button name="btn-delete-cancel"  text="Cancel" class="auth-secondary" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
 
     </ui:VisualElement>

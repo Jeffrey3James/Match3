@@ -25,6 +25,17 @@ namespace JadedBelles.Networking
         public string refreshToken;
     }
 
+    /// <summary>
+    /// Body for POST /api/accountDeletion/request. The public web form on
+    /// jadedbelles.com and this Unity client both post the same shape to
+    /// the same endpoint — the API doesn't care which surface sent it.
+    /// </summary>
+    [Serializable]
+    public class AccountDeletionRequestBody
+    {
+        public string email;
+    }
+
     /// <summary>Generic save request without optimistic-concurrency metadata.</summary>
     [Serializable]
     public class PutGameSaveRequest

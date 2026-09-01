@@ -50,6 +50,10 @@ namespace JadedBelles.UI
         private Label _userDisplay, _userEmail;
         private Button _btnLogout;
 
+        // ---- Danger zone (account deletion)
+        private Button _btnDeleteAccount, _btnDeleteConfirm, _btnDeleteCancel;
+        private VisualElement _deleteConfirmRow;
+
         private bool _busy;
 
         // ------------------------------------------------------------------
@@ -146,6 +150,11 @@ namespace JadedBelles.UI
             _btnGuest    = _root.Q<Button>("btn-guest");
             _btnLogout   = _root.Q<Button>("btn-logout");
 
+            _btnDeleteAccount = _root.Q<Button>("btn-delete-account");
+            _btnDeleteConfirm = _root.Q<Button>("btn-delete-confirm");
+            _btnDeleteCancel  = _root.Q<Button>("btn-delete-cancel");
+            _deleteConfirmRow = _root.Q<VisualElement>("delete-confirm");
+
             _status       = _root.Q<Label>("status");
             _busyOverlay  = _root.Q<VisualElement>("busy-overlay");
 
@@ -162,6 +171,10 @@ namespace JadedBelles.UI
             _btnGuest.clicked    += HandleGuest;
             _btnLogout.clicked   += HandleLogout;
 
+            if (_btnDeleteAccount != null) _btnDeleteAccount.clicked += HandleDeleteAccountClick;
+            if (_btnDeleteConfirm != null) _btnDeleteConfirm.clicked += HandleDeleteAccountConfirm;
+            if (_btnDeleteCancel  != null) _btnDeleteCancel.clicked  += HandleDeleteAccountCancel;
+
             // Submit-on-enter
             _loginPassword.RegisterCallback<KeyDownEvent>(OnLoginEnter);
             _regPassword.RegisterCallback<KeyDownEvent>(OnRegisterEnter);
@@ -175,6 +188,10 @@ namespace JadedBelles.UI
             if (_btnRegister != null) _btnRegister.clicked -= HandleRegister;
             if (_btnGuest != null)    _btnGuest.clicked    -= HandleGuest;
             if (_btnLogout != null)   _btnLogout.clicked   -= HandleLogout;
+
+            if (_btnDeleteAccount != null) _btnDeleteAccount.clicked -= HandleDeleteAccountClick;
+            if (_btnDeleteConfirm != null) _btnDeleteConfirm.clicked -= HandleDeleteAccountConfirm;
+            if (_btnDeleteCancel  != null) _btnDeleteCancel.clicked  -= HandleDeleteAccountCancel;
 
             _loginPassword?.UnregisterCallback<KeyDownEvent>(OnLoginEnter);
             _regPassword?.UnregisterCallback<KeyDownEvent>(OnRegisterEnter);
@@ -258,6 +275,79 @@ namespace JadedBelles.UI
             ClearStatus();
             OnGuestChosen?.Invoke();
             if (_hideWhenSignedIn) gameObject.SetActive(false);
+        }
+
+        // ------------------------------------------------------------------
+        // Danger zone: account deletion
+        //
+        // Google Play policy (enforced May 2024) requires apps with accounts
+        // to expose an in-app way to request permanent account deletion.
+        // We satisfy that here by kicking off the same email-verification
+        // flow that the public web form at jadedbelles.com/delete-account
+        // uses — the API endpoint (/api/accountDeletion/request) doesn't
+        // care which surface the request came from, and the actual
+        // deletion always requires the user to click a link in their
+        // email inbox, so a compromised session can't destroy an account
+        // on its own.
+        //
+        // Two-tap confirmation: the first tap reveals a copy block and
+        // the actual "send" button. Prevents a stray tap from firing off
+        // a deletion request the user didn't mean to make.
+        // ------------------------------------------------------------------
+        private void HandleDeleteAccountClick()
+        {
+            if (_busy) return;
+            if (_deleteConfirmRow == null) return;
+            _deleteConfirmRow.RemoveFromClassList("hidden");
+            // Keep the primary "Delete my account" button disabled while
+            // the confirm row is showing so it doesn't visually compete
+            // with the confirm button.
+            _btnDeleteAccount?.SetEnabled(false);
+        }
+
+        private void HandleDeleteAccountCancel()
+        {
+            if (_deleteConfirmRow == null) return;
+            _deleteConfirmRow.AddToClassList("hidden");
+            _btnDeleteAccount?.SetEnabled(true);
+            ClearStatus();
+        }
+
+        private void HandleDeleteAccountConfirm()
+        {
+            if (_busy) return;
+
+            // Use the email already fetched into the signed-in view. If for
+            // some reason it's blank (network hiccup during FetchAndShowUser),
+            // bail with a helpful message rather than sending an empty POST.
+            string email = _userEmail != null ? (_userEmail.text ?? string.Empty).Trim() : string.Empty;
+            if (string.IsNullOrEmpty(email))
+            {
+                ShowStatus("Couldn't read your account email. Try signing out and back in, then try again.", ok: false);
+                return;
+            }
+
+            SetBusy(true, "Requesting deletion...");
+            JadedBellesApiClient.Instance.RequestAccountDeletion(
+                email,
+                _ =>
+                {
+                    SetBusy(false);
+                    // Hide the confirm row so the surface returns to a
+                    // clean state; leave the primary button disabled so
+                    // it can't be fired again in the same session.
+                    if (_deleteConfirmRow != null) _deleteConfirmRow.AddToClassList("hidden");
+                    _btnDeleteAccount?.SetEnabled(false);
+                    ShowStatus(
+                        "Check your email for a confirmation link. Deletion won't happen until you click it.",
+                        ok: true);
+                },
+                err =>
+                {
+                    SetBusy(false);
+                    _btnDeleteAccount?.SetEnabled(true);
+                    ShowStatus(err ?? "Could not reach the deletion service. Try again in a minute.", ok: false);
+                });
         }
 
         private void HandleLogout()
@@ -392,6 +482,8 @@ namespace JadedBelles.UI
             _btnRegister?.SetEnabled(!busy);
             _btnGuest?.SetEnabled(!busy);
             _btnLogout?.SetEnabled(!busy);
+            _btnDeleteConfirm?.SetEnabled(!busy);
+            _btnDeleteCancel?.SetEnabled(!busy);
 
             if (_busyOverlay != null)
             {
