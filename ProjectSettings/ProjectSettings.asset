@@ -168,7 +168,7 @@ PlayerSettings:
   applicationIdentifier:
     Android: com.JadedBelles.GemJam
     Standalone: com.Unity-Technologies.com.unity.template.urp-blank
-    iPhone: com.Unity-Technologies.com.unity.template.urp-blank
+    iPhone: .com.JadedBelles.GemJam
   buildNumber:
     Standalone: 0
     VisionOS: 0
