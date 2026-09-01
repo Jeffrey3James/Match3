@@ -1,4 +1,4 @@
-# Xandria Gem Jam — Ad Monetization Plan
+# Xandria Gem Adventure — Ad Monetization Plan
 
 **Owner:** Game / Unity engineering  
 **Platform scope:** Android and iOS first; WebGL remains ad-free for this release  
@@ -16,7 +16,7 @@ The older repo was investigated and contains no ad, analytics, optimization, rem
 
 ## 1. Current project integration map
 
-The plan deliberately targets existing Xandria Gem Jam seams rather than inventing a parallel game loop:
+The plan deliberately targets existing Xandria Gem Adventure seams rather than inventing a parallel game loop:
 
 | Need | Current integration point | Implementation action |
 |---|---|---|
@@ -295,7 +295,7 @@ public interface IAdProvider
 ### Phase 0 — prerequisites and acceptance criteria (about 1–2 hours)
 
 - Create LevelPlay account/project, Android/iOS app entries, placements, test devices, and consent configuration.
-- Confirm app package/bundle IDs and store listings. The current README lists `com.JadedBelles.GemJam`.
+- Confirm app package/bundle IDs and store listings. The current README lists `com.JadedBelles.XandriaGemAdventure`.
 - Define `hasRemovedAds` as a backward-compatible field in `PlayerData`; default false. Decide whether it is local-only until IAP entitlement sync exists.
 - Fix/test the existing life cap/regeneration before exposing any rewarded-life UI.
 - Add a mobile-only feature switch (`adsEnabled`) that defaults false outside development/QA configuration.

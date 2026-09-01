@@ -1,9 +1,9 @@
-# Xandria Gem Jam
+# Xandria Gem Adventure
 
 A match-3 puzzle game built in Unity 6, shipping to **mobile (Android/iOS)** and **the browser (WebGL)**. It is part of the [JadedBelles](https://jadedbelles.com) platform: players can play as a guest with zero friction, or sign in with their JadedBelles account to sync progress across devices.
 
 - **Unity version:** `6000.0.34f1` (Unity 6) — Universal Render Pipeline
-- **Product name:** GemJam · **Bundle ID:** `com.JadedBelles.GemJam` · **Company:** JadedBelles
+- **Product name:** Xandria Gem Adventure · **Bundle ID:** `com.JadedBelles.XandriaGemAdventure` · **Company:** JadedBelles
 - **Backend:** [`jadedbelles-api`](https://github.com/Jeffrey3James/jadedbelles-api) at `https://api.jadedbelles.com`
 
 ---
@@ -123,7 +123,7 @@ The save payload is an **opaque JSON document owned by the game** — the API ne
 
 **Conflict handling:** every write bumps a server-side `Revision`. The client sends the last revision it saw as `baseRevision`; if it no longer matches, the API returns `409 Conflict` with the server's current save, and the client keeps whichever side has the newer `updatedAt`.
 
-> ⚠️ **`JadedBellesApiClient.GameProductSlug` is currently `"match3-quest"`** — the seeded platform product slug. Confirm this matches the real production product for Xandria Gem Jam and change that one constant if not.
+> ⚠️ **`JadedBellesApiClient.GameProductSlug` is currently `"match3-quest"`** — the seeded platform product slug. Confirm this matches the real production product for Xandria Gem Adventure and change that one constant if not.
 
 ---
 
