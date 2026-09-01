@@ -22,10 +22,11 @@ namespace Match3Game.Monetization
         //   app key:            LevelPlay > Apps > (your app)
         //   rewarded ad unit:   LevelPlay > Ad Units > Rewarded
         // Leave empty to keep ads disabled for that platform.
-        private const string AndroidAppKey = "27c08e61d";
-        private const string AndroidRewardedAdUnitId = "vklt5xfnqhh10dq4";
-        private const string IosAppKey = "27c06e055";
-        private const string IosRewardedAdUnitId = "ozbi1w8qca1libgd";
+        private const string AndroidAppKey = "27e5b89cd";
+        private const string AndroidRewardedAdUnitId = "q4qkd0m3uk3kh2mo";
+
+        private const string IosAppKey = "27e5bc355";
+        private const string IosRewardedAdUnitId = "466fs7ggxcnvhbg6";
         // ───────────────────────────────────────────────────────────────────
 
         /// <summary>Moves granted per completed rewarded view.</summary>
