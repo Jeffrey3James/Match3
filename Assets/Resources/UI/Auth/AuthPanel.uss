@@ -175,3 +175,65 @@
 }
 
 .hidden { display: none; }
+
+/* ---- Danger zone (account deletion) ---- */
+/* Sits at the bottom of the signed-in view. Muted-red styling so users
+   don't misread it as a normal action, plus a top rule to visually
+   separate it from the log-out button above. */
+.auth-danger-zone {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.10);
+}
+
+.auth-danger-label {
+    color: rgb(240, 130, 130);
+    font-size: 11px;
+    -unity-font-style: bold;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+}
+
+.auth-danger {
+    background-color: rgb(120, 40, 50);
+    color: rgb(250, 235, 235);
+    border-width: 0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    -unity-font-style: bold;
+    margin-top: 4px;
+}
+
+.auth-danger:hover { background-color: rgb(150, 55, 65); }
+.auth-danger:active { background-color: rgb(95, 30, 40); }
+.auth-danger:disabled { opacity: 0.55; }
+
+.auth-danger-confirm {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background-color: rgba(120, 40, 50, 0.18);
+    border-radius: 8px;
+}
+
+.auth-danger-copy {
+    color: rgb(230, 210, 210);
+    font-size: 11px;
+    white-space: normal;
+    margin-bottom: 8px;
+}
+
+.auth-danger-row {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.auth-danger-row > .auth-danger,
+.auth-danger-row > .auth-secondary {
+    flex-grow: 1;
+    margin-top: 0;
+    margin-right: 4px;
+}
+
+.auth-danger-row > .auth-secondary { margin-right: 0; margin-left: 4px; }

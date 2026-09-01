@@ -104,6 +104,31 @@ namespace JadedBelles.Networking
             StartCoroutine(RefreshAccessTokenRoutine(onSuccess, onError));
         }
 
+        /// <summary>
+        /// Kicks off the Google Play-compliant self-serve account deletion
+        /// flow for the currently signed-in user's email (or any email the
+        /// caller supplies). The API responds with the same generic
+        /// "if that email exists, we've sent a link" message regardless of
+        /// whether the address matched a real account, so the client
+        /// treats every non-error response as success and tells the user
+        /// to check their inbox. Completing the deletion requires the user
+        /// to click the link in the email — nothing in the app can bypass
+        /// that email round-trip. Unauthenticated on purpose so it works
+        /// even if the app's saved token has expired.
+        /// </summary>
+        public void RequestAccountDeletion(string email, Action<ApiResponsePlain> onSuccess, Action<string> onError)
+        {
+            AccountDeletionRequestBody body = new AccountDeletionRequestBody { email = email };
+            StartCoroutine(SendRequest<ApiResponsePlain>(
+                UnityWebRequest.kHttpVerbPOST,
+                "/api/accountDeletion/request",
+                JsonUtility.ToJson(body),
+                false,
+                false,
+                onSuccess,
+                onError));
+        }
+
         public void Logout(Action<ApiResponsePlain> onSuccess, Action<string> onError)
         {
             StartCoroutine(SendRequest<ApiResponsePlain>(
