@@ -1,0 +1,57 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <!-- AuthPanel.uss is attached at runtime by AuthPanelController via Resources.Load. -->
+
+    <!-- Root. The controller toggles .signed-out / .signed-in on this element. -->
+    <ui:VisualElement name="auth-root" class="auth-root signed-out" picking-mode="Position">
+
+        <!-- ==================== SIGNED-OUT VIEW ==================== -->
+        <ui:VisualElement name="signed-out-view" class="auth-card signed-out-only">
+
+            <ui:Label name="title" text="JadedBelles" class="auth-title" />
+            <ui:Label name="subtitle" text="Sign in to sync your progress" class="auth-subtitle" />
+
+            <!-- Tab strip -->
+            <ui:VisualElement name="tab-bar" class="tab-bar">
+                <ui:Button name="tab-login"    text="Log in"   class="tab-btn tab-btn--active" />
+                <ui:Button name="tab-register" text="Register" class="tab-btn" />
+            </ui:VisualElement>
+
+            <!-- ---------- Login panel ---------- -->
+            <ui:VisualElement name="panel-login" class="tab-panel tab-panel--active">
+                <ui:TextField name="login-email"    label="Email"    class="auth-field" />
+                <ui:TextField name="login-password" label="Password" password="true" mask-character="•" class="auth-field" />
+                <ui:Button    name="btn-login"      text="Log in"    class="auth-primary" />
+            </ui:VisualElement>
+
+            <!-- ---------- Register panel ---------- -->
+            <ui:VisualElement name="panel-register" class="tab-panel">
+                <ui:TextField name="reg-display"  label="Display name" class="auth-field" />
+                <ui:TextField name="reg-email"    label="Email"        class="auth-field" />
+                <ui:TextField name="reg-password" label="Password" password="true" mask-character="•" class="auth-field" />
+                <ui:Button    name="btn-register" text="Create account" class="auth-primary" />
+            </ui:VisualElement>
+
+            <!-- Status / error line -->
+            <ui:Label name="status" text="" class="auth-status" />
+
+            <!-- Guest / footer -->
+            <ui:VisualElement class="auth-footer">
+                <ui:Button name="btn-guest" text="Play as guest" class="auth-secondary" />
+            </ui:VisualElement>
+
+            <!-- Busy overlay -->
+            <ui:VisualElement name="busy-overlay" class="busy-overlay hidden" picking-mode="Position">
+                <ui:Label text="Working..." class="busy-label" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- ==================== SIGNED-IN VIEW ==================== -->
+        <ui:VisualElement name="signed-in-view" class="auth-card signed-in-only">
+            <ui:Label name="welcome" text="Welcome back" class="auth-title" />
+            <ui:Label name="user-display" text="" class="auth-user-display" />
+            <ui:Label name="user-email"   text="" class="auth-user-email" />
+            <ui:Button name="btn-logout"  text="Log out" class="auth-secondary" />
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,3 +1,4 @@
+using JadedBelles.UI;
 using StroTheGoat;
 using System;
 using TMPro;
@@ -20,9 +21,13 @@ public class MainMenuUI : MonoBehaviour
     private const float uiRefreshInterval = 0.25f; // Refresh lives/timer labels 4x per second
 
     private void Start()
-    {    
+    {
+        // Check for a JadedBelles session token. Signed in → pull saves and continue.
+        // Not signed in (and not previously a guest) → the gate spawns the AuthPanel modal.
+        MainMenuAuthGate.Ensure();
+
         SetUpMainMenu();
-        Debug.Log("Setting Up Main Menu UI");   
+        Debug.Log("Setting Up Main Menu UI");
     }
 
     private void Update()
