@@ -397,17 +397,17 @@ namespace JadedBelles.Networking
         [System.Diagnostics.Conditional("UNITY_EDITOR")]
         private static void ApplyEditorCertBypass(UnityWebRequest request)
         {
-            request.certificateHandler = AcceptAllCertificatesHandler.Shared;
+#if UNITY_EDITOR
+          request.certificateHandler = AcceptAllCertificatesHandler.Shared;
             request.disposeCertificateHandlerOnDispose = false;
+      #endif
         }
 
-#if UNITY_EDITOR
         private sealed class AcceptAllCertificatesHandler : CertificateHandler
         {
             public static readonly AcceptAllCertificatesHandler Shared = new AcceptAllCertificatesHandler();
             protected override bool ValidateCertificate(byte[] certificateData) => true;
         }
-#endif
 
         private static bool WasApiSuccessful<T>(T response)
         {

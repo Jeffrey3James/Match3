@@ -66,7 +66,8 @@ namespace Match3Game
 
         private void Awake()
         {
-            inputReader = GetComponent<InputReader>();
+      Debug.Log($"[Match3] Board instances alive: {FindObjectsByType<Match3>(FindObjectsSortMode.None).Length}, scene={gameObject.scene.name}");
+      inputReader = GetComponent<InputReader>();
             ResolveLevel();
         }
 

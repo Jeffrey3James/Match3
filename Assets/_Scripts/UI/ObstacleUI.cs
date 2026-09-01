@@ -12,7 +12,7 @@ public class ObstacleUI : MonoBehaviour
 
     public void SetObstacleImage(Sprite sprite)
     {
-        obstacleImage.sourceImage = sprite;
+        obstacleImage.sprite = sprite;
     }
 
     public void SetObstacleCount(int count)

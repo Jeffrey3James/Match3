@@ -7,6 +7,9 @@ using UnityEngine;
 /// Runtime representation of one level. No longer authored as individual assets:
 /// instances are created by LevelHandler and hydrated from levels.json data.
 /// </summary>
+/// 
+
+[CreateAssetMenu(fileName ="Level", menuName = "Match3/Fallback")]
 public class Level : ScriptableObject
 {
     [SerializeField] private string levelName;
