@@ -178,8 +178,8 @@ public class InRunBoosterBar : MonoBehaviour
         // Uncomment once agent A exposes Match3.Instance and RemoveGemAt.
         // See /home/user/workspace/coord/requests.md, "FROM D TO A".
         //
-        // if (Match3Game.Match3.Instance != null)
-        //     Match3Game.Match3.Instance.RemoveGemAt(gx, gy);
+        if (Match3Game.Match3.Instance != null)
+            Match3Game.Match3.Instance.RemoveGemAt(gx, gy);
         // ──────────────────────────────────────────────────────────────────
 
         DisarmHammer();
