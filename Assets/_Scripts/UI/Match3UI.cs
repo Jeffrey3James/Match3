@@ -64,8 +64,7 @@ public class Match3UI : MonoBehaviour
         }
 
         levelResultPanel?.Hide();
-        CreateObstacleUI();
-        CreateObjectiveUI();
+        BuildLevelGoalPanel();
 
         events.onLevelCompleted += LevelComplete;
         events.onLevelFailed += LevelFailed;
@@ -141,6 +140,42 @@ public class Match3UI : MonoBehaviour
         // The panel itself waits for onScoreFinalized so the reward tally finishes first.
     }
 
+    /// <summary>
+    /// Fills the top panel with one tile per level goal so the player can see what clearing
+    /// the level actually requires. Objectives first, then obstacles — both carry a live count
+    /// that ticks down as they're cleared.
+    /// </summary>
+    private void BuildLevelGoalPanel()
+    {
+        if (uiBackgroundContainer == null)
+        {
+            Debug.LogError("Match3UI: UI Background Container is unassigned. The player has no way " +
+                           "to see the level goals.");
+            return;
+        }
+
+        if (uiBackgroundContainer.GetComponent<LayoutGroup>() == null)
+        {
+            Debug.LogWarning("Match3UI: the goal panel has no LayoutGroup, so tiles will stack on " +
+                             "top of each other. Add a Grid or Horizontal Layout Group to '" +
+                             uiBackgroundContainer.name + "'.");
+        }
+
+        CreateObjectiveUI();
+        CreateObstacleUI();
+
+        int tiles = uiBackgroundContainer.childCount;
+        if (tiles == 0)
+        {
+            Debug.LogWarning($"Match3UI: level '{level.GetLevelName()}' produced no goal tiles. " +
+                             "The player can't tell how to complete it.");
+        }
+        else
+        {
+            Debug.Log($"Match3UI: goal panel built with {tiles} tile(s) for '{level.GetLevelName()}'.");
+        }
+    }
+
     public void CreateObstacleUI()
     {
         //TODO: Swap the TextMeshPro Number for a Check or something
@@ -186,11 +221,29 @@ public class Match3UI : MonoBehaviour
 
     public void CreateObjectiveUI()
     {
+        if (objectiveUIPrefab == null || uiBackgroundContainer == null)
+        {
+            Debug.LogError("Match3UI: Objective UI Prefab or UI Background Container is unassigned.");
+            return;
+        }
+
         List<ObjectiveConfig> objectiveConfigsList = level.GetObjectives();
+        if (objectiveConfigsList == null || objectiveConfigsList.Count == 0)
+        {
+            Debug.Log($"Match3UI: level '{level.GetLevelName()}' defines no gem objectives.");
+            return;
+        }
+
         HashSet<ObjectiveConfig> objectiveConfigs = new HashSet<ObjectiveConfig>(objectiveConfigsList);
 
         foreach (var objectiveConfig in objectiveConfigs)
         {
+            if (objectiveConfig.typesToClear == null)
+            {
+                Debug.LogWarning("Match3UI: skipping an objective config with no gem type assigned.");
+                continue;
+            }
+
             var channel = level.GetOrCreateChannelObjConfig(objectiveConfig.typesToClear);
             var uiObj = Instantiate(objectiveUIPrefab, uiBackgroundContainer);
             var ui = uiObj.GetComponent<ObjectiveUI>();
