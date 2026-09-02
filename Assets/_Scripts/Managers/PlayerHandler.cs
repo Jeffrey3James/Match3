@@ -145,6 +145,17 @@ public class PlayerHandler : MonoBehaviour
         return playerCurrentLevel;
     }
 
+    // ACT 2 ADDITION — minimal accessor only, no behavior change to Act 1.
+    // playerData.playerLevel is the existing progress counter (incremented in
+    // OnLevelCompleted above). Act2SpecialTileManager reads this through
+    // GetPlayerLevel() to decide whether the standard combo table (striped /
+    // wrapped / color-bomb tiles) is active for the current player. See
+    // Assets/_Scripts/Act2/Act2SpecialTileManager.cs for the actual gate check.
+    public int GetPlayerLevel()
+    {
+        return playerData != null ? playerData.playerLevel : 0;
+    }
+
     public void RecievePlayerDataFromCloud(PlayerData data)
     {
         playerData = data;

@@ -217,6 +217,7 @@ namespace Match3Game
 
                 yield return StartCoroutine(ExplodeGems(matches));
                 SpawnPowerups();
+                SpawnAct2Specials(); // ACT 2 HOOK #4 — see method doc comment below.
                 yield return StartCoroutine(CheckAllAdjacentObstacles(new HashSet<Vector2Int>(matches)));
                 
                 yield return StartCoroutine(MakeGemsFall());
@@ -365,6 +366,12 @@ namespace Match3Game
         {
             HashSet<Vector2Int> allMatches = new();
             List<List<Vector2Int>> matchGroups = new();
+            // ACT 2 ADDITION: horizontal and vertical runs kept separate (not just
+            // merged into matchGroups) so ShapeMatchDetector can look for L/T
+            // intersections between them below. Act 1's own logic below still only
+            // ever reads matchGroups (the concatenation of both), unchanged.
+            List<List<Vector2Int>> horizontalGroups = new();
+            List<List<Vector2Int>> verticalGroups = new();
             powerupSpawns.Clear();
 
             // Horizontal
@@ -393,6 +400,7 @@ namespace Match3Game
                     {
                         foreach (var pos in temp) allMatches.Add(pos);
                         matchGroups.Add(new(temp));
+                        horizontalGroups.Add(new(temp));
                     }
                     matchStart = next;
                 }
@@ -420,6 +428,7 @@ namespace Match3Game
                     {
                         foreach (var pos in temp) allMatches.Add(pos);
                         matchGroups.Add(new(temp));
+                        verticalGroups.Add(new(temp));
                     }
                     matchStart = next;
                 }
@@ -429,6 +438,24 @@ namespace Match3Game
             {
                 Debug.Log("Game Over, no matches found");
                 return new List<Vector2Int>();
+            }
+
+            // ============================================================
+            // ACT 2 HOOK #1 — L/T-shape (wrapped tile) detection.
+            // Gated behind player level 251+ via Act2SpecialTileManager.IsActive().
+            // Calls OUT to the standalone Act2.ShapeMatchDetector (Assets/_Scripts/
+            // Act2/ShapeMatchDetector.cs) rather than implementing shape detection
+            // inline here — FindMatches() itself still only does straight-line runs.
+            // Below level 251 this whole block is skipped and behavior is identical
+            // to before Act 2 existed.
+            // ============================================================
+            if (Act2.Act2SpecialTileManager.IsActive() && Act2.Act2SpecialTileManager.instance != null)
+            {
+                var shapeMatches = Act2.ShapeMatchDetector.FindShapeMatches(horizontalGroups, verticalGroups);
+                foreach (var shapeMatch in shapeMatches)
+                {
+                    Act2.Act2SpecialTileManager.instance.QueueWrapped(shapeMatch.intersection);
+                }
             }
 
             foreach (var group in matchGroups)
@@ -443,10 +470,29 @@ namespace Match3Game
                         case 3:
                             break;
                         case 4:
+                            // ACT 2 HOOK #2 — striped-tile override. Below level 251,
+                            // TryOverridePowerupSpawn always returns false and this is a
+                            // no-op, so the Act 1 Bomb/Flower spawn below fires exactly
+                            // as it always has. At/above level 251, Act 2 queues a
+                            // Striped tile INSTEAD and we skip the Act 1 add. See
+                            // Act2SpecialTileManager's coexistence doc comment for why.
+                            if (Act2.Act2SpecialTileManager.instance != null &&
+                                Act2.Act2SpecialTileManager.instance.TryOverridePowerupSpawn(group, gemType))
+                            {
+                                break;
+                            }
                             //Bomb --- Flower 
                             powerupSpawns.Add((group[0], 0, null));
                             break;
                         case 5:
+                            // ACT 2 HOOK #3 — color-bomb override (same pattern as case 4,
+                            // see comment above). Below level 251 this is a no-op and the
+                            // Act 1 Rocket spawn below fires exactly as it always has.
+                            if (Act2.Act2SpecialTileManager.instance != null &&
+                                Act2.Act2SpecialTileManager.instance.TryOverridePowerupSpawn(group, gemType))
+                            {
+                                break;
+                            }
                             //Rockets -- Vine
                             int[] rocketPowerups = { 1, 2 };
                             int randomRocket = rocketPowerups[Random.Range(0, rocketPowerups.Length)];
@@ -594,6 +640,7 @@ namespace Match3Game
                 }
                 yield return StartCoroutine(ExplodeGems(newMatches));
                 SpawnPowerups();
+                SpawnAct2Specials(); // ACT 2 HOOK #4 — see method doc comment below.
                 yield return StartCoroutine(MakeGemsFall());
                 yield return StartCoroutine(FillEmptySpots());
                 newMatches = FindMatches();
@@ -618,6 +665,21 @@ namespace Match3Game
                 }
             }
             powerupSpawns.Clear();
+        }
+
+        // ACT 2 ADDITION — minimal hook only. Mirrors SpawnPowerups() immediately
+        // above: called right after it from both game-loop coroutines. Delegates
+        // all actual instantiation to Act2SpecialTileManager.SpawnQueuedSpecials()
+        // (Assets/_Scripts/Act2/Act2SpecialTileManager.cs), which owns its own
+        // prefab/asset references and grid-write logic — nothing Act2-specific
+        // lives in this method body beyond the null/no-op guard. If no manager
+        // instance exists (Act 2 not present in the scene) or the level gate is
+        // below 251, the pending-spawn list managed by Act2SpecialTileManager is
+        // simply empty and this is a harmless no-op, identical to pre-Act2 behavior.
+        private void SpawnAct2Specials()
+        {
+            if (Act2.Act2SpecialTileManager.instance == null) return;
+            Act2.Act2SpecialTileManager.instance.SpawnQueuedSpecials(grid2, transform);
         }
 
         private void CreatePowerUpGem(int x, int y, int powerupType, GemTypes types)
