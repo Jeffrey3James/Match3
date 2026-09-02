@@ -37,6 +37,8 @@ Two extra scenes are **not** in the build and must not be deleted:
 
 On the splash screen, `AuthManager` runs a 3-second countdown and a session check in parallel. If a refresh token exists in `TokenStore`, it silently refreshes; otherwise the player continues as a **guest**. The menu loads only when both finish, so a slow network never blocks past the logo. Guests are never gated.
 
+The newer `SessionBootstrap` + `LoadingScreen` pair does the same job with a visible, speed-gated progress bar and owns the decision of whether the login panel ever appears — see [Loading screen and auth UI](#loading-screen-and-auth-ui). Use one or the other on a given scene, not both.
+
 ---
 
 ## Levels are data-driven
@@ -123,7 +125,112 @@ The save payload is an **opaque JSON document owned by the game** — the API ne
 
 **Conflict handling:** every write bumps a server-side `Revision`. The client sends the last revision it saw as `baseRevision`; if it no longer matches, the API returns `409 Conflict` with the server's current save, and the client keeps whichever side has the newer `updatedAt`.
 
-> ⚠️ **`JadedBellesApiClient.GameProductSlug` is currently `"match3-quest"`** — the seeded platform product slug. Confirm this matches the real production product for Xandria Gem Jam and change that one constant if not.
+---
+
+## Loading screen and auth UI
+
+All of this is **plain uGUI**. There is no UI Toolkit anywhere in the project — no UXML, no USS, no `UIDocument`, no `Resources.Load` for UI. Runtime-attached UI Toolkit never bound reliably here (see [Gotchas](#gotchas)), so every reference was removed.
+
+Five components, all Inspector drag-and-drop:
+
+| Script | Role |
+| --- | --- |
+| `UI/BreathingImage.cs` | Organic pulse for the loading art — scale, optional alpha and rotation sway. |
+| `UI/LoadingBar.cs` | Filled Image that fills upward, speed-gated against real progress. |
+| `UI/LoadingScreen.cs` | Step registry and dismissal gating. Singleton via `LoadingScreen.Instance`. |
+| `UI/SessionBootstrap.cs` | Runs session restore as a load step, then shows the login panel only if needed. |
+| `UI/LoginPanel.cs` | Two fields, two buttons. Purely reactive — it does not decide when to appear. |
+| `Networking/SessionService.cs` | Single source of truth for auth state. Not a MonoBehaviour. |
+
+### Scene setup
+
+**1. Loading screen.** Canvas → full-screen panel, `LoadingScreen` on the panel root.
+
+- Child Image with your logo/art → add `BreathingImage`. Nothing to assign; it auto-finds the `Image` on its own GameObject.
+- Child Image for the bar fill → add `LoadingBar`, drag that Image into **Fill Image**. Set Image **Type = Filled**. Fill Method and Origin are forced to Vertical/Bottom in `Awake`, so the bar always moves up even if you forget.
+- Optionally drag a `TextMeshProUGUI` into **Status Label** (on `LoadingScreen`) and/or **Percent Label** (on `LoadingBar`).
+- A `CanvasGroup` is added automatically if absent; it drives the fade-out.
+
+**2. Login panel.** Canvas → panel, `LoginPanel` on the root. Drag in:
+
+| Slot | Type | Notes |
+| --- | --- | --- |
+| Username Field | `TMP_InputField` | This is the account **email**. |
+| Password Field | `TMP_InputField` | Set Content Type = **Password**. |
+| Login Button | `Button` | |
+| Sign Up Button | `Button` | Display name is derived from the email local part. |
+| Guest Button | `Button` | Optional. |
+| Status Text | `TextMeshProUGUI` | Optional. Shows errors. |
+
+> **Do not wire the Buttons' OnClick lists in the Inspector.** `LoginPanel.Awake` adds its own listeners. Wiring both fires every action twice.
+
+**3. Boot object.** Empty GameObject with `SessionBootstrap`. Drag in the `LoadingScreen` and the `LoginPanel`.
+
+> **Leave the LoginPanel GameObject disabled in the scene.** `SessionBootstrap` activates it only when auth is genuinely required.
+
+### How progress is gated
+
+`LoadingBar` shows **`min(constant-speed ramp, real reported progress)`**. Two independent limits, both enforced every frame:
+
+1. **Constant speed** — the fill moves at a fixed units-per-second rate (`fillSpeed`, default `0.35`). However fast the data actually arrives, the bar never jumps. A 20 ms load and a 3 s load look identical to the player until the ceiling moves.
+2. **Cannot outrun the data** — the displayed value is clamped to reported progress. If only 40% of the work is confirmed, the bar stops dead at 40% regardless of elapsed time.
+
+Progress only ever moves forward; a slow step finishing after a fast one cannot yank the bar backwards.
+
+The screen then needs **three** gates before it dismisses:
+
+- every registered step is complete,
+- the bar has visually reached 100% at its own pace,
+- `minimumDisplaySeconds` has elapsed (default `1.25`, prevents a flash on instant loads).
+
+### Boot sequence
+
+`SessionBootstrap` registers three steps up front so the denominator stays stable, then resolves them in order:
+
+```
+session   -> SessionService.Restore()
+levels    -> waits on LevelHandler.LevelsReady
+playerData-> PlayerDataManager.PullRemotePlayerData()  (skipped for guests)
+```
+
+Each completion raises the ceiling by 1/3 and the bar crawls toward it. Once the screen dismisses, `SessionBootstrap` checks `SessionService.IsResolved`:
+
+- **Resolved** (signed in, offline-signed-in, or guest) → the login panel is never activated.
+- **Needs auth** → the login panel is shown.
+
+A returning player with a valid — or merely expired-but-refreshable — token never sees the login panel. Nothing else in the UI has to branch on auth state.
+
+Every step has a timeout (`stepTimeoutSeconds`, default 15 s) so a hung request can't strand the player on the loading screen.
+
+### Session state
+
+`SessionService` is the only thing that decides whether the player is signed in. `LoginPanel` routes login, sign-up, guest, and logout through it rather than touching `PlayerPrefs` directly, so the guest flag isn't tracked in two places.
+
+| State | Meaning | Login panel? |
+| --- | --- | --- |
+| `SignedIn` | Verified account session. | Hidden |
+| `OfflineSignedIn` | Tokens exist, server unreachable. | Hidden |
+| `Guest` | Player chose guest. | Hidden |
+| `NeedsAuth` | No usable session. | **Shown** |
+| `Unknown` | Restore hasn't run yet. | — |
+
+**Persistent login.** `TokenStore` keeps access and refresh tokens in `PlayerPrefs` across launches, and `JadedBellesApiClient` refreshes on a `401` and retries once. `Restore()` calls `GET /api/v1/auth/me` to verify rather than trusting `HasSession()`, which only proves the token strings exist.
+
+**Offline does not log you out.** A transport failure (DNS, timeout, no connection) resolves to `OfflineSignedIn` and keeps the tokens. Only a genuine auth rejection clears them. A player on a plane stays signed in.
+
+### Driving the loading screen from your own code
+
+```csharp
+LoadingScreen.Instance.Show("Connecting...");
+LoadingScreen.Instance.RegisterSteps("levels", "saves");
+
+// ... later, as each finishes ...
+LoadingScreen.Instance.CompleteStep("levels", "Levels loaded.");
+LoadingScreen.Instance.CompleteStep("saves", "Progress synced.");
+// screen dismisses itself once the bar catches up
+```
+
+For a long single step, `ReportPartialProgress(0..1)` fills within that step's slice. `ReportProgressDirect(0..1)` bypasses step tracking entirely. `ForceComplete()` finishes regardless of outstanding steps.
 
 ---
 
@@ -138,11 +245,12 @@ Assets/
     Level/            Level.cs — a board instance, hydrated at runtime from LevelData
     Levels/           LevelDataModels.cs (JSON DTOs), GemTypeRegistry.cs (name -> asset)
     Managers/         LevelHandler (level catalog), PlayerHandler, AudioManager
-    Networking/       JadedBellesApiClient, ApiModels, TokenStore
+    Networking/       JadedBellesApiClient, ApiModels, TokenStore, SessionService
     Utils/            AuthManager, PlayerDataManager, Timer, StroTheGoatUtils
     Gems/ GemTypes/   Gem behaviour, gem/obstacle/power-up ScriptableObject types
     GridSystem/       Grid math
-    UI/               Menus and HUD
+    UI/               Menus, HUD, LoginPanel, LoadingScreen/LoadingBar/BreathingImage,
+                      SessionBootstrap.  All plain uGUI — no UI Toolkit.
     LevelDesignEditorWindow.cs, LevelEditorRuntime.cs
   Resources/          GemTypeRegistry.asset, Levels/levels.json  (runtime-loaded)
   _Prefabs/ _MyGems/ Images/ WebAssets/ Travis Game Assets/
@@ -180,9 +288,12 @@ No profile yet — create one. Nothing in the codebase is iOS-hostile.
 - **New gems/obstacles must be added to `Resources/GemTypeRegistry.asset`**, otherwise level JSON referencing them silently fails to hydrate.
 - **`Assets.zip` (88 MB) is committed at the repo root.** It bloats every clone and is almost certainly a leftover backup. Consider deleting it and adding `*.zip` to `.gitignore`.
 - **Don't assume levels are loaded.** Subscribe to `LevelHandler.OnLevelsReady` or check `LevelsReady`.
+- **Don't reintroduce UI Toolkit.** Runtime-attached `UIDocument` + `VisualTreeAsset` repeatedly failed to bind its root here (tracked as JADED-UI-001) across several attempted fixes. Every UXML/USS asset and `UnityEngine.UIElements` reference was removed. Build UI with uGUI prefabs and Inspector drag-slots.
+- **Don't wire button OnClick in the Inspector for `LoginPanel`.** It adds its own listeners in `Awake`; doing both fires each action twice.
 
 ## Known TODO
 
-- **Login/register UI does not exist yet.** The plumbing is done — `JadedBellesApiClient` has `Login`, `Register`, and `Logout` ready — but the canvas needs building in the Editor and wiring to those calls.
+- **Loading screen and login panel canvases still need building in the Editor.** All the code exists and is Inspector-driven — see [Loading screen and auth UI](#loading-screen-and-auth-ui) for exactly which slots to fill.
+- Decide whether `AuthManager`'s splash-screen session check is retired in favour of `SessionBootstrap`; right now both paths exist.
 - WebGL and iOS build profiles need to be created.
-- Confirm `GameProductSlug` against the production product catalog.
+- Google Play Console registration deadline is **Sept 30, 2026**. Package name `com.JadedBelles.GemJam`.
