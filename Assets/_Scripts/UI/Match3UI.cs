@@ -196,6 +196,7 @@ public class Match3UI : MonoBehaviour
             return;
         }
 
+
         HashSet<ObstacleConfig> obstacleConfigs = new HashSet<ObstacleConfig>(obstacleConfigsList);
 
         foreach (var obstacleConfig in obstacleConfigs)
