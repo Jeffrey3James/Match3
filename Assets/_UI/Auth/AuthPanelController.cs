@@ -63,19 +63,36 @@ namespace JadedBelles.UI
         // ------------------------------------------------------------------
         private void OnEnable()
         {
+            // Defer setup one frame. UIDocument itself clones visualTreeAsset into rootVisualElement
+            // during its OWN OnEnable, which may run after ours (component enable order isn't guaranteed).
+            // Running our bind on the next tick guarantees the tree is present.
+            StartCoroutine(SetupNextFrame());
+        }
+
+        private System.Collections.IEnumerator SetupNextFrame()
+        {
+            yield return null; // wait one frame so UIDocument has cloned its tree
+
             var doc = GetComponent<UIDocument>();
+            if (doc == null) yield break;
+
             var rootVisual = doc.rootVisualElement;
             if (rootVisual == null)
             {
                 Debug.LogError("[AuthPanel] UIDocument has no rootVisualElement. Is a Panel Settings asset assigned?");
-                return;
+                yield break;
             }
 
-            // If the visual tree isn't there yet (Unity hasn't cloned it from visualTreeAsset), do it now.
-            // Covers the runtime Spawn() path AND anyone who assigned the UXML in the Editor but ran into
-            // an ordering quirk. Safe to call because we skip when children already exist.
-            if (rootVisual.childCount == 0 && doc.visualTreeAsset != null)
-                doc.visualTreeAsset.CloneTree(rootVisual);
+            // Fallback clone in case UIDocument didn't populate the tree (e.g. no visualTreeAsset assigned in Editor,
+            // or we're wired up in an unusual order). Load the UXML from Resources and clone it ourselves.
+            if (rootVisual.childCount == 0)
+            {
+                var uxmlAsset = doc.visualTreeAsset != null
+                    ? doc.visualTreeAsset
+                    : Resources.Load<VisualTreeAsset>("UI/Auth/AuthPanel");
+                if (uxmlAsset != null)
+                    uxmlAsset.CloneTree(rootVisual);
+            }
 
             // Attach the stylesheet from Resources so callers don't have to wire it up per scene.
             var uss = Resources.Load<StyleSheet>("UI/Auth/AuthPanel");
@@ -85,8 +102,16 @@ namespace JadedBelles.UI
             _root = rootVisual.Q<VisualElement>("auth-root");
             if (_root == null)
             {
-                Debug.LogError("[AuthPanel] Could not find #auth-root in the UXML. Is AuthPanel.uxml assigned to the UIDocument?");
-                return;
+                // Real diagnostic: dump the tree we actually have so we can tell WHY it's missing.
+                var childNames = new System.Text.StringBuilder();
+                for (int i = 0; i < rootVisual.childCount; i++)
+                {
+                    var c = rootVisual[i];
+                    childNames.Append("[").Append(i).Append("] name='").Append(c.name ?? "").Append("' type=").Append(c.GetType().Name).Append("  ");
+                }
+                Debug.LogError($"[AuthPanel] Could not find #auth-root. rootVisual.childCount={rootVisual.childCount}. Children: {childNames}. " +
+                               $"visualTreeAsset={(doc.visualTreeAsset != null ? doc.visualTreeAsset.name : "<null>")}");
+                yield break;
             }
 
             CacheQueries();
@@ -105,7 +130,17 @@ namespace JadedBelles.UI
             var uxml = Resources.Load<VisualTreeAsset>("UI/Auth/AuthPanel");
             if (uxml == null)
             {
-                Debug.LogError("[AuthPanel] Could not load Resources/UI/Auth/AuthPanel.uxml.");
+                // Diagnose why: was the asset present but imported as the wrong type?
+                var raw = Resources.Load("UI/Auth/AuthPanel");
+                if (raw != null)
+                {
+                    Debug.LogError($"[AuthPanel] Resources/UI/Auth/AuthPanel exists but was imported as {raw.GetType().FullName}, not VisualTreeAsset. " +
+                                   "Right-click the .uxml in Unity and choose Reimport, or delete Library/ and reopen the project so the UXML importer runs.");
+                }
+                else
+                {
+                    Debug.LogError("[AuthPanel] Resources/UI/Auth/AuthPanel not found. Expected file: Assets/Resources/UI/Auth/AuthPanel.uxml.");
+                }
                 return null;
             }
 
@@ -120,8 +155,9 @@ namespace JadedBelles.UI
                 panelSettings.match = 0.5f;
             }
 
-            // Create the GameObject INACTIVE so AddComponent<AuthPanelController>() doesn't run
-            // OnEnable before we've had a chance to force the UIDocument to build its visual tree.
+            // Build the whole GameObject while inactive, then activate once.
+            // The controller's OnEnable defers its bind to the next frame, so UIDocument has time to
+            // clone its own visual tree before we query it. Order of AddComponent no longer matters.
             var go = new GameObject("AuthPanel (runtime)");
             go.SetActive(false);
 
@@ -130,18 +166,10 @@ namespace JadedBelles.UI
             doc.visualTreeAsset = uxml;
             doc.sortingOrder = 100; // Render above the rest of the MainMenu.
 
-            // Force-build the visual tree ourselves so the controller can Q<>() it in OnEnable.
-            // Unity normally does this on the UIDocument's own OnEnable / next tick, which
-            // is too late — AddComponent<T>() below runs OnEnable synchronously.
-            var rootVisual = doc.rootVisualElement;
-            if (rootVisual != null && rootVisual.childCount == 0)
-                uxml.CloneTree(rootVisual);
-
             var controller = go.AddComponent<AuthPanelController>();
             controller._hideWhenSignedIn = hideWhenSignedIn;
             controller._pullPlayerDataOnLogin = pullPlayerDataOnLogin;
 
-            // Now activate; the controller's OnEnable fires with a fully-built tree in place.
             go.SetActive(true);
             return controller;
         }
