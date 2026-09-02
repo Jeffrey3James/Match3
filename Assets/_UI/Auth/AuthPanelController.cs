@@ -71,6 +71,12 @@ namespace JadedBelles.UI
                 return;
             }
 
+            // If the visual tree isn't there yet (Unity hasn't cloned it from visualTreeAsset), do it now.
+            // Covers the runtime Spawn() path AND anyone who assigned the UXML in the Editor but ran into
+            // an ordering quirk. Safe to call because we skip when children already exist.
+            if (rootVisual.childCount == 0 && doc.visualTreeAsset != null)
+                doc.visualTreeAsset.CloneTree(rootVisual);
+
             // Attach the stylesheet from Resources so callers don't have to wire it up per scene.
             var uss = Resources.Load<StyleSheet>("UI/Auth/AuthPanel");
             if (uss != null && !rootVisual.styleSheets.Contains(uss))
@@ -114,15 +120,29 @@ namespace JadedBelles.UI
                 panelSettings.match = 0.5f;
             }
 
+            // Create the GameObject INACTIVE so AddComponent<AuthPanelController>() doesn't run
+            // OnEnable before we've had a chance to force the UIDocument to build its visual tree.
             var go = new GameObject("AuthPanel (runtime)");
+            go.SetActive(false);
+
             var doc = go.AddComponent<UIDocument>();
             doc.panelSettings = panelSettings;
             doc.visualTreeAsset = uxml;
             doc.sortingOrder = 100; // Render above the rest of the MainMenu.
 
+            // Force-build the visual tree ourselves so the controller can Q<>() it in OnEnable.
+            // Unity normally does this on the UIDocument's own OnEnable / next tick, which
+            // is too late — AddComponent<T>() below runs OnEnable synchronously.
+            var rootVisual = doc.rootVisualElement;
+            if (rootVisual != null && rootVisual.childCount == 0)
+                uxml.CloneTree(rootVisual);
+
             var controller = go.AddComponent<AuthPanelController>();
             controller._hideWhenSignedIn = hideWhenSignedIn;
             controller._pullPlayerDataOnLogin = pullPlayerDataOnLogin;
+
+            // Now activate; the controller's OnEnable fires with a fully-built tree in place.
+            go.SetActive(true);
             return controller;
         }
 
