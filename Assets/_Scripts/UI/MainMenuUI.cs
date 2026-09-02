@@ -5,6 +5,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Match3Game.Monetization;
 
 public class MainMenuUI : MonoBehaviour
 {
@@ -24,6 +25,11 @@ public class MainMenuUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI playerLivesText;
     [SerializeField] private TextMeshProUGUI playerCoinsText;
     [SerializeField] private TextMeshProUGUI timeUntilNewLifeText;
+
+    [Header("Rewarded Ad")]
+    [Tooltip("Optional. Button on the lives-empty popup that offers a rewarded ad for +1 life. " +
+             "Wire this in the Inspector once the popup GameObject exists.")]
+    [SerializeField] private Button watchAdForLifeButton;
 
     [Header("HUD Counters (new)")]
     [Tooltip("Optional. If set, coins are shown here with count-up + punch-scale, and the raw TMP field is ignored for coin writes.")]
@@ -234,5 +240,42 @@ public class MainMenuUI : MonoBehaviour
                 });
         }
 
+        if (watchAdForLifeButton != null)
+        {
+            watchAdForLifeButton.onClick.RemoveAllListeners();
+            watchAdForLifeButton.onClick.AddListener(OnWatchAdForLifeClicked);
+        }
+
+    }
+
+    // ------------------------------------------------------------------
+    // Rewarded ad → +1 life (lives-empty popup hook)
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Public so the Watch Ad button on the lives-empty popup can call it directly
+    /// via a UnityEvent in the Inspector, in addition to the AddListener wire-up in
+    /// <see cref="SetUpMainMenu"/>. Delegates to AdManager, which itself grants the
+    /// life on reward — this handler only refreshes the HUD afterwards.
+    /// </summary>
+    public void OnWatchAdForLifeClicked()
+    {
+        if (AdManager.Instance == null)
+        {
+            Debug.LogWarning("[MainMenuUI] AdManager not available; cannot show rewarded life ad.");
+            return;
+        }
+
+        AdManager.Instance.ShowRewardedExtraLife(
+            onGranted: OnRewardedLifeGranted,
+            onNotGranted: () => Debug.Log("[MainMenuUI] Rewarded-life ad not granted (declined or unavailable)."));
+    }
+
+    // AdManager.ShowRewardedExtraLife already calls PlayerHandler.AddALifeToPlayer
+    // internally on reward, so this callback must NOT grant another life. It only
+    // pushes the new count into the HUD so the player sees it immediately.
+    private void OnRewardedLifeGranted()
+    {
+        RefreshLivesUI();
     }
 }
