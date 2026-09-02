@@ -57,9 +57,23 @@ namespace JadedBelles.Networking
 
         // ---------- Auth ----------
 
-        public void Login(string email, string password, Action<ApiResponseAuth> onSuccess, Action<string> onError)
+        /// <summary>
+        /// Logs in with a username OR an email address. The <paramref name="identifier"/>
+        /// is sent as-is; the server decides how to look up the account. The legacy
+        /// <c>email</c> field is also populated when the identifier looks like an
+        /// email so older API deployments that only read <c>email</c> keep working.
+        /// </summary>
+        public void Login(string identifier, string password, Action<ApiResponseAuth> onSuccess, Action<string> onError)
         {
-            LoginRequest body = new LoginRequest { email = email, password = password };
+            string trimmed = identifier != null ? identifier.Trim() : string.Empty;
+            LoginRequest body = new LoginRequest
+            {
+                identifier = trimmed,
+                // Only send `email` when it actually looks like one, so a username
+                // isn't accidentally interpreted as an email by legacy backends.
+                email = trimmed.Contains("@") ? trimmed : null,
+                password = password
+            };
             StartCoroutine(SendRequest<ApiResponseAuth>(
                 UnityWebRequest.kHttpVerbPOST,
                 "/api/v1/auth/login",
@@ -75,11 +89,19 @@ namespace JadedBelles.Networking
                 onError));
         }
 
-        public void Register(string email, string password, string displayName, Action<ApiResponseAuth> onSuccess, Action<string> onError)
+        /// <summary>
+        /// Registers with either a username or an email. If <paramref name="identifier"/>
+        /// contains '@' it's treated as the email; otherwise it's treated as a
+        /// username-only signup and the account is created without an email.
+        /// </summary>
+        public void Register(string identifier, string password, string displayName, Action<ApiResponseAuth> onSuccess, Action<string> onError)
         {
+            string trimmed = identifier != null ? identifier.Trim() : string.Empty;
+            bool looksLikeEmail = trimmed.Contains("@");
             RegisterRequest body = new RegisterRequest
             {
-                email = email,
+                username = looksLikeEmail ? null : trimmed,
+                email = looksLikeEmail ? trimmed : null,
                 password = password,
                 displayName = displayName
             };
