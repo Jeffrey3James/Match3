@@ -90,9 +90,22 @@ namespace Match3Game.Monetization
         /// show a button that can't pay out.
         /// </summary>
         public bool IsExtraMovesOfferAvailable() =>
-            !showInFlight
+            MonetizationConfig.REWARDED_ADS_ENABLED
+            && !showInFlight
             && DisplayedPlayerLevel() > AdFreeDisplayedLevels
             && extraMovesGrantsThisAttempt < MaxExtraMovesGrantsPerAttempt
+            && provider.IsRewardedReady();
+
+        /// <summary>
+        /// True when a "watch ad for +1 life" offer should be visible: rewarded
+        /// ads are enabled, no other show is in flight, and an ad is loaded.
+        /// The per-attempt cap deliberately does NOT apply — this is a menu
+        /// offer, not an in-run rescue, so the cadence is naturally limited by
+        /// the player deciding to press the button after losing a life.
+        /// </summary>
+        public bool IsRewardedLifeOfferAvailable() =>
+            MonetizationConfig.REWARDED_ADS_ENABLED
+            && !showInFlight
             && provider.IsRewardedReady();
 
         /// <summary>
@@ -123,6 +136,64 @@ namespace Match3Game.Monetization
                     Debug.Log($"[Ads] No reward: {reason}");
                     onNotGranted?.Invoke();
                 });
+        }
+
+        /// <summary>
+        /// Rewarded-ad offer that grants +1 life on completion. Wired to the
+        /// lives popup (item 16 in the gap doc). Grants the life via
+        /// <see cref="PlayerHandler.AddALifeToPlayer"/> exactly once per view;
+        /// declines/closes leave the player alone.
+        /// </summary>
+        public void ShowRewardedExtraLife(Action onGranted, Action onNotGranted)
+        {
+            if (!IsRewardedLifeOfferAvailable())
+            {
+                onNotGranted?.Invoke();
+                return;
+            }
+
+            showInFlight = true;
+            provider.ShowRewarded(
+                onReward: () =>
+                {
+                    showInFlight = false;
+                    if (PlayerHandler.instance != null)
+                        PlayerHandler.instance.AddALifeToPlayer();
+                    Debug.Log("[Ads] Extra-life reward granted");
+                    onGranted?.Invoke();
+                },
+                onNoReward: reason =>
+                {
+                    showInFlight = false;
+                    Debug.Log($"[Ads] No reward (life): {reason}");
+                    onNotGranted?.Invoke();
+                });
+        }
+
+        // ── Interstitials ──────────────────────────────────────────────────
+        // No interstitial ad units are configured today, but keep the entry
+        // point so future callers (level-load, main-menu return, etc.) route
+        // through the same feature gate. Sep 11 playtest ships with
+        // INTERSTITIALS_ENABLED=false, so these calls are no-ops.
+
+        /// <summary>
+        /// Show an interstitial ad if the feature flag allows it and the
+        /// provider has one ready. Deliberately silent — callers must be
+        /// tolerant of "no ad shown" (nothing depends on interstitials
+        /// completing to progress gameplay).
+        /// </summary>
+        public void ShowInterstitial()
+        {
+            // Gate #1: master feature flag. Sep 11 playtest ships with this off.
+            if (!MonetizationConfig.INTERSTITIALS_ENABLED) return;
+            // Gate #2: don't stack on top of a rewarded ad.
+            if (showInFlight) return;
+
+            // No interstitial ad unit is configured on IAdProvider today — the
+            // provider surface is rewarded-only. When the interstitial provider
+            // is added, dispatch through it here. Deliberately not removed so
+            // future call sites keep routing through the same feature gate.
+            Debug.Log("[Ads] Interstitial requested; no provider wired.");
         }
 
         // playerLevel is a zero-based index; players see level 1 first.
