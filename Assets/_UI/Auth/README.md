@@ -5,35 +5,37 @@ A drop-in login / register / guest / signed-in panel that talks directly to
 
 ## Files
 
-- `AuthPanel.uxml` — markup. Contains both the signed-out (login/register/guest) view and the signed-in view; the controller toggles between them via `.signed-out` / `.signed-in` classes on `#auth-root`.
-- `AuthPanel.uss` — styling. Referenced from the UXML with `<Style src="AuthPanel.uss" />`, so if you assign the UXML to a `UIDocument` the styles come along automatically.
-- `AuthPanelController.cs` — behaviour. Requires a `UIDocument` on the same GameObject.
+- `Assets/Resources/UI/Auth/AuthPanel.uxml` — markup. Both the signed-out (login/register/guest) view and the signed-in view live in one file. The controller toggles between them via `.signed-out` / `.signed-in` classes on `#auth-root`.
+- `Assets/Resources/UI/Auth/AuthPanel.uss` — styling. Loaded at runtime by the controller from Resources, so no per-scene wiring is needed.
+- `AuthPanelController.cs` — component. Requires a `UIDocument` on the same GameObject.
+- `MainMenuAuthGate.cs` — token-check + auto-mount on MainMenu.
 
-Place all three files together anywhere under `Assets/` (they reference each other by relative path).
+## Runtime setup (what `MainMenuAuthGate` does)
 
-## Setup per scene
+`MainMenuAuthGate` attaches BOTH a `UIDocument` and an `AuthPanelController` to its **own** GameObject — one GameObject, one modal panel. No second "AuthPanel (runtime)" child. Flow:
 
-1. In the scene hierarchy, create an empty GameObject (or reuse an existing canvas root) named `AuthPanel`.
-2. Add component **UI Document**.
-   - **Panel Settings:** any Panel Settings asset (create one via `Assets > Create > UI Toolkit > Panel Settings Asset` if the project doesn't already have one).
-   - **Source Asset:** `AuthPanel.uxml`.
-3. Add component **Auth Panel Controller**.
-4. (Optional) In the Inspector:
-   - `Hide When Signed In` — flip on for a boot-scene login gate; leave off for a persistent account widget in the main menu.
-   - `Pull Player Data On Login` — leave on so lives / coins / progress refresh from the server right after sign-in.
-   - `On Logged In` / `On Logged Out` / `On Guest Chosen` — wire scene transitions here if you want (e.g. `SceneManager.LoadScene("MainMenu")` on `OnLoggedIn` when used as a boot gate).
+1. `MainMenuUI.Start()` calls `MainMenuAuthGate.Ensure()`.
+2. If `TokenStore.HasSession()` is true → pulls remote saves and no overlay appears.
+3. Else if the player previously chose guest (`jb_played_as_guest` PlayerPrefs) → no overlay.
+4. Otherwise → the gate adds `UIDocument` + `AuthPanelController` to itself and loads the UXML/USS from Resources. The panel stays up until the player either signs in / registers or taps "Play as guest".
 
-That's it. No prefab reconfiguration, no per-scene button wiring, no scene-file edits.
+## Editor setup (if you want to place the panel manually in a scene)
+
+1. Create an empty GameObject.
+2. Add **UI Document**: assign your Panel Settings asset and set Source Asset to `AuthPanel.uxml`.
+3. Add **Auth Panel Controller** on the same GameObject.
+
+That's it. The controller loads `AuthPanel.uss` from Resources itself.
 
 ## What it does
 
 - **Log in** → `JadedBellesApiClient.Login(email, password, …)`. On success, tokens are already saved by the client via `TokenStore`; the controller then calls `GetCurrentUser` to populate the signed-in view and (optionally) `PlayerDataManager.PullRemotePlayerData()` to sync progress.
-- **Register** → `JadedBellesApiClient.Register(email, password, displayName, …)`, then the same post-login flow as above.
-- **Play as guest** → does not touch the API; fires `OnGuestChosen`. `PlayerDataManager` is already local-first, so the game works fine offline.
-- **Log out** → `JadedBellesApiClient.Logout(…)`. Even if the server call errors, the local session is treated as gone (the client clears tokens).
+- **Register** → `JadedBellesApiClient.Register(email, password, displayName, …)`, then the same post-login flow.
+- **Play as guest** → does not touch the API; fires `OnGuestChosen`. `PlayerDataManager` is already local-first, so the game works offline.
+- **Log out** → `JadedBellesApiClient.Logout(…)`. Even if the server call errors, the local session is treated as gone (client clears tokens).
 
 ## Notes
 
-- Uses only `JsonUtility`-friendly types via the existing API client — no Newtonsoft dependency (keeps WebGL builds small, consistent with the project's architecture rule).
+- `JsonUtility`-only via the existing API client — no Newtonsoft, keeps WebGL builds small.
 - No editor-only APIs are touched, so it compiles for WebGL / Android / iOS without `#if UNITY_EDITOR` guards.
-- Namespaces assumed: `JadedBelles.Networking` (for `JadedBellesApiClient`) and the global `PlayerDataManager`. If either lives elsewhere in your project, adjust the `using` line at the top of `AuthPanelController.cs`.
+- Namespaces: `JadedBelles.Networking` for `JadedBellesApiClient`, global namespace for `PlayerDataManager`.

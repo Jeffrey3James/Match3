@@ -7,14 +7,13 @@ using UnityEngine.UIElements;
 namespace JadedBelles.UI
 {
     /// <summary>
-    /// Drop-in reusable UI Toolkit auth panel.
+    /// Reusable UI Toolkit auth panel: login / register tabs, guest button, signed-in view.
     ///
-    /// Setup (once, per scene that needs auth):
-    ///   1. Add a GameObject with a <see cref="UIDocument"/> component.
-    ///   2. Assign AuthPanel.uxml as the Source Asset (the .uss is referenced from the UXML).
-    ///   3. Add this <see cref="AuthPanelController"/> component to the same GameObject.
+    /// Setup: attach a <see cref="UIDocument"/> component pointing at
+    /// <c>Resources/UI/Auth/AuthPanel.uxml</c>, then add this controller to the SAME
+    /// GameObject. <see cref="MainMenuAuthGate"/> does this at runtime; you can also set it
+    /// up in the Editor by dropping the UXML on a UIDocument and adding this component.
     ///
-    /// Everything else is code — no per-scene button wiring, no prefab reconfiguration.
     /// Talks to <see cref="JadedBellesApiClient"/> for login / register / logout, then
     /// refreshes <see cref="PlayerDataManager"/> from the API so saves come down immediately.
     /// </summary>
@@ -119,59 +118,11 @@ namespace JadedBelles.UI
             RefreshView();
         }
 
-        /// <summary>
-        /// Spawns a fully wired AuthPanel at runtime with no scene setup required.
-        /// Loads the UXML from <c>Resources/UI/Auth/AuthPanel</c> and its USS from
-        /// <c>Resources/UI/Auth/AuthPanel</c>. Returns the created controller so callers
-        /// can subscribe to <see cref="OnLoggedIn"/>, <see cref="OnGuestChosen"/>, etc.
-        /// </summary>
-        public static AuthPanelController Spawn(PanelSettings panelSettings = null, bool hideWhenSignedIn = true, bool pullPlayerDataOnLogin = true)
+        /// <summary>Configure runtime toggles from the caller that added this component.</summary>
+        public void Configure(bool hideWhenSignedIn = true, bool pullPlayerDataOnLogin = true)
         {
-            var uxml = Resources.Load<VisualTreeAsset>("UI/Auth/AuthPanel");
-            if (uxml == null)
-            {
-                // Diagnose why: was the asset present but imported as the wrong type?
-                var raw = Resources.Load("UI/Auth/AuthPanel");
-                if (raw != null)
-                {
-                    Debug.LogError($"[AuthPanel] Resources/UI/Auth/AuthPanel exists but was imported as {raw.GetType().FullName}, not VisualTreeAsset. " +
-                                   "Right-click the .uxml in Unity and choose Reimport, or delete Library/ and reopen the project so the UXML importer runs.");
-                }
-                else
-                {
-                    Debug.LogError("[AuthPanel] Resources/UI/Auth/AuthPanel not found. Expected file: Assets/Resources/UI/Auth/AuthPanel.uxml.");
-                }
-                return null;
-            }
-
-            // If no PanelSettings was supplied, build a serviceable one in memory so the caller doesn't
-            // have to author an asset in the Editor. Perfectly fine for a modal overlay.
-            if (panelSettings == null)
-            {
-                panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
-                panelSettings.name = "AuthPanel_RuntimePanelSettings";
-                panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-                panelSettings.referenceResolution = new Vector2Int(1080, 1920);
-                panelSettings.match = 0.5f;
-            }
-
-            // Build the whole GameObject while inactive, then activate once.
-            // The controller's OnEnable defers its bind to the next frame, so UIDocument has time to
-            // clone its own visual tree before we query it. Order of AddComponent no longer matters.
-            var go = new GameObject("AuthPanel (runtime)");
-            go.SetActive(false);
-
-            var doc = go.AddComponent<UIDocument>();
-            doc.panelSettings = panelSettings;
-            doc.visualTreeAsset = uxml;
-            doc.sortingOrder = 100; // Render above the rest of the MainMenu.
-
-            var controller = go.AddComponent<AuthPanelController>();
-            controller._hideWhenSignedIn = hideWhenSignedIn;
-            controller._pullPlayerDataOnLogin = pullPlayerDataOnLogin;
-
-            go.SetActive(true);
-            return controller;
+            _hideWhenSignedIn = hideWhenSignedIn;
+            _pullPlayerDataOnLogin = pullPlayerDataOnLogin;
         }
 
         private void OnDisable()
