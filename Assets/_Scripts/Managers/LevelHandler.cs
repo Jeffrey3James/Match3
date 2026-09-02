@@ -108,4 +108,7 @@ public class LevelHandler : MonoBehaviour
     {
         return new List<Level>(levels);
     }
+
+    /// <summary>Number of levels in the catalog, without copying the list.</summary>
+    public int LevelCount => levels.Count;
 }

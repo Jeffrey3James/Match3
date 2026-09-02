@@ -4,8 +4,6 @@ using Match3Game;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using System;
-using UnityEngine.SceneManagement;
-using Match3Game.Monetization;
 
 public class Match3UI : MonoBehaviour
 {
@@ -15,16 +13,10 @@ public class Match3UI : MonoBehaviour
     [Header("Obstacles")]
     [SerializeField] private GameObject obstacleUIPrefab;
 
-    [Header("Game Over")]
-    [SerializeField] private GameObject gameOverWindow;
-    [SerializeField] private Button retry;
-    [SerializeField] private Button mainMenu;
+    [Header("End of Level")]
+    [Tooltip("Owns the win/loss buttons. See LevelResultPanel for which buttons show when.")]
+    [SerializeField] private LevelResultPanel levelResultPanel;
     [SerializeField] private Transform uiContainer;
-
-    [Header("Rewarded Ads (optional)")]
-    [Tooltip("'Watch ad: +5 moves' button inside the game-over window. Leave unassigned to ship without the offer.")]
-    [SerializeField] private Button watchAdExtraMoves;
-    [SerializeField] private Match3 board;
 
     [Header("UI Background Container")]
     [SerializeField] private TextMeshProUGUI coinText;
@@ -37,6 +29,12 @@ public class Match3UI : MonoBehaviour
     private Level level;
 
     private System.Action onScoreFinalizedAction;
+
+    // Which result we're showing. Set by onLevelCompleted / onLevelFailed, consumed by
+    // onScoreFinalized. Without this the panel can't tell a win from a loss, because the
+    // event that actually reveals it fires for both.
+    private LevelResultPanel.LevelResult pendingResult = LevelResultPanel.LevelResult.Loss;
+    private bool hasPendingResult;
 
     private void Awake()
     {
@@ -56,8 +54,16 @@ public class Match3UI : MonoBehaviour
         }
 
         var events = GameEventsManager.instance.gameEvents;
-        SetupGameOverScreen();
-        gameOverWindow.SetActive(false);
+
+        if (levelResultPanel == null)
+        {
+            levelResultPanel = FindFirstObjectByType<LevelResultPanel>(FindObjectsInactive.Include);
+            if (levelResultPanel == null)
+                Debug.LogError("Match3UI: no LevelResultPanel assigned or found. " +
+                               "The end-of-level buttons will never appear.");
+        }
+
+        levelResultPanel?.Hide();
         CreateObstacleUI();
         CreateObjectiveUI();
 
@@ -65,7 +71,7 @@ public class Match3UI : MonoBehaviour
         events.onLevelFailed += LevelFailed;
         events.onScoreChanged += UpdateScoreUI;
 
-        onScoreFinalizedAction = () => gameOverWindow.SetActive(true);
+        onScoreFinalizedAction = ShowResultPanel;
         events.onScoreFinalized += onScoreFinalizedAction;
     }
 
@@ -90,44 +96,37 @@ public class Match3UI : MonoBehaviour
 
     private void LevelFailed()
     {
-        RefreshWatchAdButton();
-        gameOverWindow.SetActive(true);
+        pendingResult = LevelResultPanel.LevelResult.Loss;
+        hasPendingResult = true;
+
+        // A loss has no score to finalize, so show immediately rather than waiting on an
+        // event that may never fire.
+        ShowResultPanel();
     }
 
-    // The offer is only visible when AdManager says an ad is loaded AND the
-    // player is eligible (past level 3, under the 2-per-attempt cap). Fail
-    // closed: no AdManager, no button.
-    private void RefreshWatchAdButton()
+    /// <summary>
+    /// Reveals the result panel with the correct button set. Safe to call twice — a loss
+    /// calls it directly and onScoreFinalized may call it again.
+    /// </summary>
+    private void ShowResultPanel()
     {
-        if (watchAdExtraMoves == null) return;
-        bool available = AdManager.Instance != null && AdManager.Instance.IsExtraMovesOfferAvailable();
-        watchAdExtraMoves.gameObject.SetActive(available);
-        watchAdExtraMoves.interactable = available;
-    }
+        if (levelResultPanel == null) return;
+        if (levelResultPanel.IsShown) return;
 
-    private void OnWatchAdClicked()
-    {
-        if (AdManager.Instance == null) return;
-        watchAdExtraMoves.interactable = false; // no double-taps while the ad shows
+        if (!hasPendingResult)
+        {
+            Debug.LogWarning("Match3UI: score finalized without a win/loss signal. " +
+                             "Defaulting to the loss layout.");
+        }
 
-        AdManager.Instance.ShowRewardedExtraMoves(
-            onGranted: () =>
-            {
-                var target = board != null ? board : FindFirstObjectByType<Match3>();
-                if (target != null && target.TryResumeWithExtraMoves(AdManager.ExtraMovesPerAd))
-                {
-                    gameOverWindow.SetActive(false);
-                }
-                else
-                {
-                    RefreshWatchAdButton();
-                }
-            },
-            onNotGranted: RefreshWatchAdButton);
+        levelResultPanel.Show(pendingResult);
     }
 
     private void LevelComplete()
     {
+        pendingResult = LevelResultPanel.LevelResult.Win;
+        hasPendingResult = true;
+
         GridLayoutGroup uiGrid = uiBackgroundContainer.GetComponent<GridLayoutGroup>();
         headerText.text = "REWARD";
         foreach (Transform child in uiBackgroundContainer)
@@ -139,6 +138,7 @@ public class Match3UI : MonoBehaviour
         coinTextInstance = Instantiate(coinText, uiBackgroundContainer);   
 
         Debug.Log("Level Completed.. Updating UI");
+        // The panel itself waits for onScoreFinalized so the reward tally finishes first.
     }
 
     public void CreateObstacleUI()
@@ -177,25 +177,5 @@ public class Match3UI : MonoBehaviour
         }
     }
 
-    private void SetupGameOverScreen()
-    {
-        retry.onClick.AddListener(() =>
-            {
-                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-                Debug.Log("Retry button clicked");
-            });
-
-        mainMenu.onClick.AddListener(() =>
-            {
-                SceneManager.LoadScene("MainMenu");
-                Debug.Log("Main Menu button clicked");
-            });
-
-        if (watchAdExtraMoves != null)
-        {
-            watchAdExtraMoves.onClick.AddListener(OnWatchAdClicked);
-            watchAdExtraMoves.gameObject.SetActive(false); // hidden until eligible
-        }
-    }
 }
 

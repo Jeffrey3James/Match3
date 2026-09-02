@@ -170,6 +170,52 @@ Five components, all Inspector drag-and-drop:
 
 Set **Next Scene** empty if you ever put this component on a scene it shouldn't navigate away from. If the `LoadingScreen` reference is missing it falls back to a no-visuals path that still resolves auth and still changes scene, so a forgotten drag can't strand the player on the splash.
 
+---
+
+## End-of-level buttons
+
+`UI/LevelResultPanel.cs` owns the game-over window. **One panel, four buttons**, shown per result — a hidden button is deactivated, not just greyed out, so a Layout Group closes the gap:
+
+| Button | Win | Loss |
+| --- | --- | --- |
+| Next Level | ✅ (hidden on the final level) | — |
+| Retry | — | ✅ |
+| Main Menu | ✅ | ✅ |
+| Watch Ad: +5 moves | — | ✅ when `AdManager` says an ad is loaded and the player is eligible |
+
+Offering "+5 moves" after a win is meaningless, and "Next Level" after a loss would skip progression, so neither is ever rendered for the wrong result.
+
+### Setup
+
+- Put `LevelResultPanel` on the game-over window root.
+- **Give the button container a Horizontal or Vertical Layout Group.** Without one, hidden buttons leave holes. Drag that container into **Button Container** so the panel can force a rebuild before it appears (otherwise the layout visibly pops on the first frame).
+- Drag in the four buttons and the optional header text. Any slot left empty is skipped.
+- Drag the panel into `Match3UI` → **Level Result Panel**. If you forget, it self-finds one in the scene (including inactive objects) and logs an error if there isn't one.
+
+> **Do not wire the buttons' OnClick lists in the Inspector.** `LevelResultPanel.Awake` adds its own listeners.
+
+### How win vs loss is detected
+
+`onScoreFinalized` fires for **both** outcomes, so it can't be used alone to pick a button set. `Match3UI` latches the result from `onLevelCompleted` / `onLevelFailed` first, then `onScoreFinalized` reveals the panel with that result. A loss shows the panel immediately rather than waiting on a score tally that may never run. `Show()` is idempotent, so the double path is safe.
+
+### Next Level
+
+`PlayerHandler` increments `playerLevel` on `onLevelCompleted`, and re-reads the current level from the catalog on **every** scene load. So Next Level just reloads `GameScene` — there's no explicit "advance" call, and Retry and Next Level differ only in that the counter already moved.
+
+Next Level auto-hides when `playerLevel >= LevelHandler.LevelCount`, and the header switches to `finalLevelHeader`.
+
+### Lives
+
+Retry and Next Level both charge a life through `PlayerHandler`, matching the main menu's gate. Both are toggleable (`retryCostsALife`, `nextLevelCostsALife`).
+
+> ⚠️ This is a **behaviour change**. The old Retry button reloaded the scene without charging anything, so retrying was a free life and the life economy could be bypassed indefinitely. If that was deliberate, turn `retryCostsALife` off.
+
+If the player is out of lives, the button refuses, the remaining buttons hide, and the header reads `OUT OF LIVES` — leaving Main Menu as the only way out.
+
+---
+
+## Loading screen internals
+
 ### How progress is gated
 
 `LoadingBar` shows **`min(constant-speed ramp, real reported progress)`**. Two independent limits, both enforced every frame:
@@ -251,8 +297,8 @@ Assets/
     Utils/            PlayerDataManager, Timer, StroTheGoatUtils
     Gems/ GemTypes/   Gem behaviour, gem/obstacle/power-up ScriptableObject types
     GridSystem/       Grid math
-    UI/               Menus, HUD, LoginPanel, LoadingScreen/LoadingBar/BreathingImage,
-                      SessionBootstrap.  All plain uGUI — no UI Toolkit.
+    UI/               Menus, HUD, LoginPanel, LevelResultPanel, LoadingScreen/LoadingBar/
+                      BreathingImage, SessionBootstrap.  All plain uGUI — no UI Toolkit.
     LevelDesignEditorWindow.cs, LevelEditorRuntime.cs
   Resources/          GemTypeRegistry.asset, Levels/levels.json  (runtime-loaded)
   _Prefabs/ _MyGems/ Images/ WebAssets/ Travis Game Assets/
