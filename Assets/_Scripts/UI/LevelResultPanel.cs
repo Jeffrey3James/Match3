@@ -70,10 +70,19 @@ public class LevelResultPanel : MonoBehaviour
     [Tooltip("Optional. Used to resume play after a rewarded ad. Found automatically if empty.")]
     [SerializeField] private Match3 board;
 
+    [Header("Continue offer (loss only)")]
+    [Tooltip("Optional. Shown BEFORE the loss UI when the player runs out of moves. " +
+             "If assigned, we hand the loss result to this panel first; on give-up we " +
+             "take over and show the normal loss buttons. If null, behaves as before.")]
+    [SerializeField] private ContinueOfferPanel continueOfferPanel;
+
     private const string MainMenuScene = "MainMenu";
 
     private LevelResult _result;
     private bool _shown;
+    // True while the continue-offer panel is speaking for us. We keep this
+    // flag so a stray Show() from Match3UI's re-entry doesn't double-open.
+    private bool _offerInFlight;
 
     public bool IsShown => _shown;
 
@@ -90,6 +99,16 @@ public class LevelResultPanel : MonoBehaviour
         if (mainMenuButton != null) mainMenuButton.onClick.AddListener(OnMainMenuClicked);
         if (watchAdExtraMovesButton != null) watchAdExtraMovesButton.onClick.AddListener(OnWatchAdClicked);
 
+        // Wire the continue-offer panel's outcomes to our own show/hide logic.
+        // Continued -> board resumed, we stay hidden (and forward the event so
+        // Match3UI can hide any "level over" chrome it drew on onLevelFailed).
+        // GaveUp    -> we take over and show the normal loss buttons.
+        if (continueOfferPanel != null)
+        {
+            continueOfferPanel.OnContinued += OnContinueOfferContinued;
+            continueOfferPanel.OnGiveUp    += OnContinueOfferGaveUp;
+        }
+
         Hide();
     }
 
@@ -97,10 +116,35 @@ public class LevelResultPanel : MonoBehaviour
     // Show / hide
     // ------------------------------------------------------------------
 
-    /// <summary>Shows the panel with the button set appropriate to the result.</summary>
+    /// <summary>Shows the panel with the button set appropriate to the result.
+    /// If a ContinueOfferPanel is wired and this is a Loss, defers to that
+    /// panel first; only after Give Up does the normal loss UI appear.</summary>
     public void Show(LevelResult result)
     {
         _result = result;
+
+        // Loss route: hand off to the continue-offer panel if we have one.
+        // We deliberately do NOT set _shown here — the panel isn't actually
+        // on-screen yet, and Match3UI polls IsShown to know whether to draw
+        // additional chrome. That reads correctly the moment we take over.
+        if (result == LevelResult.Loss
+            && continueOfferPanel != null
+            && !_offerInFlight)
+        {
+            _offerInFlight = true;
+            panelRoot.SetActive(false);
+            continueOfferPanel.Show();
+            return;
+        }
+
+        ShowResultDirectly(result);
+    }
+
+    // The old Show() body, split out so both the direct-loss path and the
+    // give-up-from-continue path can call it without recursion tricks.
+    private void ShowResultDirectly(LevelResult result)
+    {
+        _offerInFlight = false;
         _shown = true;
 
         bool isWin = result == LevelResult.Win;
@@ -125,7 +169,28 @@ public class LevelResultPanel : MonoBehaviour
     public void Hide()
     {
         _shown = false;
+        _offerInFlight = false;
         if (panelRoot != null) panelRoot.SetActive(false);
+    }
+
+    // ------------------------------------------------------------------
+    // Continue-offer callbacks
+    // ------------------------------------------------------------------
+
+    private void OnContinueOfferContinued()
+    {
+        // Board is running again; stay hidden. Match3UI treats us as "not
+        // shown" and its own onLevelFailed cleanup already happened when the
+        // loss fired — the resume path re-enables input in Match3 itself.
+        _offerInFlight = false;
+        _shown = false;
+        OnResumedWithExtraMoves?.Invoke();
+    }
+
+    private void OnContinueOfferGaveUp()
+    {
+        // Player declined the offer. Fall through to the normal loss UI.
+        ShowResultDirectly(LevelResult.Loss);
     }
 
     private static void SetActive(Button button, bool visible)
