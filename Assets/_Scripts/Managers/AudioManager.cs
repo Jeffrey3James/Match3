@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace Match3Game {
     [RequireComponent(typeof(AudioSource))]
@@ -18,7 +20,22 @@ namespace Match3Game {
         [SerializeField] AudioClip missile;
         [SerializeField] AudioClip nuke;
 
+        /// <summary>Editor-authored key→clip mapping used by <see cref="PlayNamed"/>. Callers
+        /// reference sounds by string so systems (juice, HUD, tutorial) don't have to be recompiled
+        /// when the sound designer swaps a clip.</summary>
+        [Serializable]
+        public struct NamedClip {
+            public string key;
+            public AudioClip clip;
+        }
+
+        [Header("Named Clips (key -> AudioClip)")]
+        [SerializeField] List<NamedClip> namedClips = new List<NamedClip>();
+
         AudioSource audioSource;
+        // Lazy lookup so we don't rebuild a Dictionary every call; nulled on OnValidate so
+        // inspector edits at edit-time re-index next play.
+        Dictionary<string, AudioClip> _namedLookup;
 
         private void Awake()
         {
@@ -41,6 +58,7 @@ namespace Match3Game {
         void OnValidate() 
         {          
             if (audioSource == null) audioSource = GetComponent<AudioSource>();
+            _namedLookup = null; // force rebuild after inspector edits
         }
 
         public void PlayClick() => PlaySafe(click);
@@ -56,13 +74,44 @@ namespace Match3Game {
         public void PlayMissile() => PlaySafe(missile);
         public void PlayNuke() => PlaySafe(nuke);
 
+        /// <summary>Play a named clip at the requested pitch. Silent no-op (with one warning)
+        /// if the key isn't registered or the clip slot is empty — audio must never crash gameplay.</summary>
+        public void PlayNamed(string key, float pitch = 1f)
+        {
+            if (string.IsNullOrEmpty(key)) return;
+            if (audioSource == null) return;
+
+            var map = GetNamedLookup();
+            if (!map.TryGetValue(key, out var clip) || clip == null) {
+                Debug.LogWarning($"AudioManager.PlayNamed: no clip registered for key '{key}'.");
+                return;
+            }
+            audioSource.pitch = Mathf.Clamp(pitch, 0.1f, 3f);
+            audioSource.PlayOneShot(clip);
+            audioSource.pitch = 1f;
+        }
+
+        Dictionary<string, AudioClip> GetNamedLookup()
+        {
+            if (_namedLookup != null) return _namedLookup;
+            _namedLookup = new Dictionary<string, AudioClip>(namedClips.Count);
+            for (int i = 0; i < namedClips.Count; i++) {
+                var nc = namedClips[i];
+                if (string.IsNullOrEmpty(nc.key)) continue;
+                // Last-write-wins is fine — designers dupe keys during iteration and expect the
+                // later row to override the earlier one.
+                _namedLookup[nc.key] = nc.clip;
+            }
+            return _namedLookup;
+        }
+
         void PlayRandomPitch(AudioClip audioClip) 
         {
             // Audio must NEVER be able to crash gameplay: an exception thrown here
             // propagates into the board coroutines that call it (ExplodeGems etc.)
             // and kills the cascade mid-flight. Missing source/clip = silence, not a throw.
             if (audioSource == null || audioClip == null) return;
-            audioSource.pitch = Random.Range(0.9f, 1.1f);
+            audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
             audioSource.PlayOneShot(audioClip);
             audioSource.pitch = 1f;
         }
