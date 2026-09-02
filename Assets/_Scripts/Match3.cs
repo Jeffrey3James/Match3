@@ -1003,6 +1003,34 @@ namespace Match3Game
             return true;
         }
 
+        /// <summary>
+        /// Public hook for the in-run hammer booster. Destroys a single gem at
+        /// (x, y) as if it were a match, then runs the normal cascade / fill /
+        /// match-follow-up cycle so any resulting matches resolve automatically.
+        /// Does NOT consume a move — hammer is free-cost, matching Royal Match.
+        /// No-op if the coordinates are out of range, the cell is empty, or the
+        /// board is in game-over state.
+        /// </summary>
+        public void RemoveGemAt(int x, int y)
+        {
+            var pos = new Vector2Int(x, y);
+            if (!IsValidPosition(pos)) return;
+            if (grid2.GetValue(x, y) == null) return;
+            if (isGameOver) return;
+
+            StartCoroutine(RemoveGemRoutine(pos));
+        }
+
+        private IEnumerator RemoveGemRoutine(Vector2Int pos)
+        {
+            var single = new List<Vector2Int> { pos };
+            yield return StartCoroutine(ExplodeGems(single));
+            yield return StartCoroutine(CheckAllAdjacentObstacles(new HashSet<Vector2Int>(single)));
+            yield return StartCoroutine(MakeGemsFall());
+            yield return StartCoroutine(FillEmptySpots());
+            yield return StartCoroutine(FindMatchesAfterPowerUp());
+        }
+
         private void SetMaxMoves()
         {
             movesLeft = level.GetMaxMoves();
