@@ -9,7 +9,7 @@ using UnityEngine.UI;
 ///
 /// SETUP (all Inspector drag-and-drop):
 ///   1. Build a Canvas with a panel containing:
-///        - TMP_InputField  "Username"   (this is the account email)
+///        - TMP_InputField  "Username"   (a username OR an email address)
 ///        - TMP_InputField  "Password"   (Content Type = Password)
 ///        - Button          "Log In"
 ///        - Button          "Sign Up"
@@ -25,10 +25,18 @@ using UnityEngine.UI;
 public class LoginPanel : MonoBehaviour
 {
     [Header("Input Fields")]
-    [Tooltip("Account email. Labeled 'Username' in the UI.")]
+    [Tooltip("Username or email address. Either is accepted at login.")]
     [SerializeField] private TMP_InputField usernameField;
     [Tooltip("Password. Set Content Type = Password on this field.")]
     [SerializeField] private TMP_InputField passwordField;
+
+    [Header("Auto-size")]
+    [Tooltip("Shrink the text in the username/password fields so long values stay inside the box.")]
+    [SerializeField] private bool autoSizeInputText = true;
+    [Tooltip("Smallest font size the input text can shrink to.")]
+    [SerializeField] private float autoSizeMin = 12f;
+    [Tooltip("Largest font size the input text can grow to. Also the starting size.")]
+    [SerializeField] private float autoSizeMax = 32f;
 
     [Header("Buttons")]
     [SerializeField] private Button loginButton;
@@ -68,6 +76,43 @@ public class LoginPanel : MonoBehaviour
         // Pressing Enter in the password field submits a login.
         if (passwordField != null)
             passwordField.onSubmit.AddListener(_ => OnLoginClicked());
+
+        if (autoSizeInputText)
+        {
+            ApplyAutoSize(usernameField);
+            ApplyAutoSize(passwordField);
+        }
+    }
+
+    // Enables TMP auto-sizing on the field's text component so long usernames,
+    // emails, or password masks shrink to fit inside the input box instead of
+    // clipping or overflowing.
+    private void ApplyAutoSize(TMP_InputField field)
+    {
+        if (field == null) return;
+
+        TMP_Text text = field.textComponent;
+        if (text != null)
+        {
+            text.enableAutoSizing = true;
+            text.fontSizeMin = autoSizeMin;
+            text.fontSizeMax = autoSizeMax;
+            text.fontSize = autoSizeMax;
+            text.overflowMode = TextOverflowModes.Ellipsis;
+        }
+
+        TMP_Text placeholder = field.placeholder as TMP_Text;
+        if (placeholder != null)
+        {
+            placeholder.enableAutoSizing = true;
+            placeholder.fontSizeMin = autoSizeMin;
+            placeholder.fontSizeMax = autoSizeMax;
+            placeholder.fontSize = autoSizeMax;
+            placeholder.overflowMode = TextOverflowModes.Ellipsis;
+        }
+
+        // Keep the input on a single visible line — auto-size handles the fit.
+        field.lineType = TMP_InputField.LineType.SingleLine;
     }
 
     private void OnDestroy()
@@ -115,15 +160,15 @@ public class LoginPanel : MonoBehaviour
     {
         if (_busy) return;
 
-        string email = (usernameField != null ? usernameField.text : "").Trim();
+        string identifier = (usernameField != null ? usernameField.text : "").Trim();
         string password = passwordField != null ? passwordField.text : "";
 
-        if (!ValidateCredentials(email, password)) return;
+        if (!ValidateCredentials(identifier, password)) return;
 
         SetBusy(true, "Signing in...");
 
         JadedBellesApiClient.Instance.Login(
-            email,
+            identifier,
             password,
             onSuccess: response =>
             {
@@ -143,19 +188,20 @@ public class LoginPanel : MonoBehaviour
     {
         if (_busy) return;
 
-        string email = (usernameField != null ? usernameField.text : "").Trim();
+        string identifier = (usernameField != null ? usernameField.text : "").Trim();
         string password = passwordField != null ? passwordField.text : "";
 
-        if (!ValidateCredentials(email, password)) return;
+        if (!ValidateCredentials(identifier, password)) return;
 
-        // Only two fields exist, so derive a starting display name from the email
-        // local part. The player can rename later from account settings.
-        string displayName = DeriveDisplayName(email);
+        // Only two fields exist, so derive a starting display name from the
+        // identifier (the email local part, or the username itself). The player
+        // can rename later from account settings.
+        string displayName = DeriveDisplayName(identifier);
 
         SetBusy(true, "Creating account...");
 
         JadedBellesApiClient.Instance.Register(
-            email,
+            identifier,
             password,
             displayName,
             onSuccess: response =>
@@ -231,18 +277,20 @@ public class LoginPanel : MonoBehaviour
     // ------------------------------------------------------------------
     // Validation + helpers
     // ------------------------------------------------------------------
-    private bool ValidateCredentials(string email, string password)
+    private bool ValidateCredentials(string identifier, string password)
     {
-        if (string.IsNullOrWhiteSpace(email))
+        if (string.IsNullOrWhiteSpace(identifier))
         {
-            SetStatus("Enter your username.", isError: true);
+            SetStatus("Enter your username or email.", isError: true);
             return false;
         }
 
-        // The API treats the username as an email address.
-        if (!email.Contains("@") || !email.Contains("."))
+        // Either a username or an email is accepted. If it looks like an email
+        // (contains '@'), require a '.' too so a stray '@' isn't accepted as a
+        // half-typed address. Bare usernames pass through without that check.
+        if (identifier.Contains("@") && !identifier.Contains("."))
         {
-            SetStatus("Username must be a valid email address.", isError: true);
+            SetStatus("That doesn't look like a valid email address.", isError: true);
             return false;
         }
 
@@ -261,11 +309,11 @@ public class LoginPanel : MonoBehaviour
         return true;
     }
 
-    private static string DeriveDisplayName(string email)
+    private static string DeriveDisplayName(string identifier)
     {
-        if (string.IsNullOrEmpty(email)) return "Player";
-        int at = email.IndexOf('@');
-        string local = at > 0 ? email.Substring(0, at) : email;
+        if (string.IsNullOrEmpty(identifier)) return "Player";
+        int at = identifier.IndexOf('@');
+        string local = at > 0 ? identifier.Substring(0, at) : identifier;
         return string.IsNullOrWhiteSpace(local) ? "Player" : local;
     }
 
