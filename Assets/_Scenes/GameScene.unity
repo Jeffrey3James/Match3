@@ -2045,7 +2045,7 @@ MonoBehaviour:
   movesLeft: 0
   obstaclesToClear: 0
   objectivesToClear: 0
-  level: {fileID: 11400000, guid: c917f0d31d6460d4a88f7c97da600497, type: 2}
+  level: {fileID: 0}
   ease: 5
   explosion: {fileID: 5024009746357069194, guid: ec3f674830402cc45bce805cf6493db7, type: 3}
   movesLeftText: {fileID: 660609145}

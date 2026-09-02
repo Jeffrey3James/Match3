@@ -146,11 +146,34 @@ public class Match3UI : MonoBehaviour
         //TODO: Swap the TextMeshPro Number for a Check or something
         //That designates that the set of obstacle has been cleared
 
+        if (obstacleUIPrefab == null || uiBackgroundContainer == null)
+        {
+            Debug.LogError("Match3UI: Obstacle UI Prefab or UI Background Container is unassigned. " +
+                           "Nothing will appear in the top panel.");
+            return;
+        }
+
         List<ObstacleConfig> obstacleConfigsList = level.GetObtacleConfigs();
+        if (obstacleConfigsList == null || obstacleConfigsList.Count == 0)
+        {
+            Debug.Log($"Match3UI: level '{level.GetLevelName()}' defines no obstacles, " +
+                      "so no obstacle UI is spawned.");
+            return;
+        }
+
         HashSet<ObstacleConfig> obstacleConfigs = new HashSet<ObstacleConfig>(obstacleConfigsList);
 
         foreach (var obstacleConfig in obstacleConfigs)
         {
+            // Hydrate skips obstacles whose name isn't in GemTypeRegistry, but a hand-authored
+            // asset can still carry an empty slot. Instantiating against it would throw mid-loop
+            // and take the remaining obstacles down with it.
+            if (obstacleConfig.obstacle == null)
+            {
+                Debug.LogWarning("Match3UI: skipping an obstacle config with no Obstacle assigned.");
+                continue;
+            }
+
             var channel = level.GetOrCreateChannel(obstacleConfig.obstacle);
             var uiObj = Instantiate(obstacleUIPrefab, uiBackgroundContainer);
             var ui = uiObj.GetComponent<ObstacleUI>();

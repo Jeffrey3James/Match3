@@ -80,15 +80,60 @@ namespace Match3Game
                 if (playerLevel != null)
                 {
                     level = playerLevel;
+                    WarnIfLevelIsEmpty("PlayerHandler");
                     return;
                 }
             }
 
-            // Fall back to a designer-assigned Level asset so the scene still boots offline.
+            // Pressing Play directly on GameScene skips the splash, so PlayerHandler never got a
+            // level. Go to the catalog ourselves rather than dropping to the blank asset — that
+            // asset has no objectives and no obstacles, so the board loads with an empty top panel
+            // and it looks like the obstacle UI is broken when it's really just missing data.
+            if (level == null && LevelHandler.instance != null && LevelHandler.instance.LevelsReady)
+            {
+                var catalog = LevelHandler.instance.GetAllLevels();
+                if (catalog.Count > 0)
+                {
+                    level = catalog[0];
+                    Debug.LogWarning("Match3: no level from PlayerHandler. Using catalog level 0 (" +
+                                     level.GetLevelName() + "). This is normal when playing " +
+                                     "GameScene directly.");
+                    WarnIfLevelIsEmpty("catalog");
+                    return;
+                }
+            }
+
+            // Last resort: a designer-assigned Level asset so the scene still boots offline.
             if (level == null && fallbackLevel != null)
             {
                 level = fallbackLevel;
-                Debug.LogWarning("Match3: using fallbackLevel because PlayerHandler had no current level.");
+                Debug.LogWarning("Match3: using fallbackLevel because PlayerHandler had no current " +
+                                 "level and the catalog wasn't ready.");
+                WarnIfLevelIsEmpty("fallbackLevel");
+            }
+
+            if (level == null)
+                Debug.LogError("Match3: could not resolve a Level from PlayerHandler, the catalog, " +
+                               "or fallbackLevel. The board cannot build.");
+        }
+
+        /// <summary>
+        /// A level with neither objectives nor obstacles is almost always a wiring or data fault,
+        /// but it fails silently: the board builds, the top panel just stays empty. Say so.
+        /// </summary>
+        private void WarnIfLevelIsEmpty(string source)
+        {
+            if (level == null) return;
+
+            int obstacles = level.GetObtacleConfigs() != null ? level.GetObtacleConfigs().Count : 0;
+            int objectives = level.GetObjectives() != null ? level.GetObjectives().Count : 0;
+
+            if (obstacles == 0 && objectives == 0)
+            {
+                Debug.LogWarning($"Match3: level '{level.GetLevelName()}' (from {source}) has no " +
+                                 "objectives and no obstacles, so the top panel will render empty. " +
+                                 "Check that levels.json has data for it and that every obstacle " +
+                                 "name resolves in GemTypeRegistry.");
             }
         }
 
