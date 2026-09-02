@@ -145,4 +145,14 @@ public class BreathingImage : MonoBehaviour
             targetImage.color = c;
         }
     }
+
+    /// <summary>
+    /// Nudge the breathing phase to peak inhale on demand — useful when the
+    /// companion widget reacts to a win and we want the portrait to swell for
+    /// a beat instead of catching it mid-exhale. Purely visual.
+    /// </summary>
+    public void PulseNow()
+    {
+        _phase = inhaleRatio * 0.5f; // Roughly peak of the inhale curve.
+    }
 }

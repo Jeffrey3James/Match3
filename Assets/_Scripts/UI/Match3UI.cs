@@ -23,7 +23,16 @@ public class Match3UI : MonoBehaviour
     [SerializeField] private Transform uiBackgroundContainer;
     [SerializeField] private TextMeshProUGUI headerText;
 
+    [Header("HUD Counters (new)")]
+    [Tooltip("Optional. If set, in-run coin score uses HUDCounter for smooth count-up + punch. " +
+             "When null, we fall back to the legacy coinText / coinTextInstance path.")]
+    [SerializeField] private HUDCounter runCoinCounter;
+    [Tooltip("Optional. Depends on E's PlayerHandler.GetStars(); wraps the call in try/catch.")]
+    [SerializeField] private HUDCounter runStarsCounter;
+
     private TextMeshProUGUI coinTextInstance;
+    private int lastScoreShown;
+    private bool scoreBootstrapped;
 
     private Match3 match3;
     private Level level;
@@ -87,10 +96,47 @@ public class Match3UI : MonoBehaviour
     private void UpdateScoreUI(int score)
     {
         Debug.Log(score);
+
+        if (runCoinCounter != null)
+        {
+            if (!scoreBootstrapped)
+            {
+                runCoinCounter.SetValue(score);
+                lastScoreShown = score;
+                scoreBootstrapped = true;
+            }
+            else if (score != lastScoreShown)
+            {
+                runCoinCounter.Tick(score - lastScoreShown);
+                lastScoreShown = score;
+            }
+        }
+
         if (coinTextInstance != null)
         {
             coinTextInstance.text = score.ToString();
         }
+    }
+
+    /// <summary>
+    /// Depends on E — wraps PlayerHandler.GetStars() so C's PR compiles even if
+    /// E's PR hasn't landed yet. Returns 0 for missing method / null data.
+    /// </summary>
+    private static int TryGetStars()
+    {
+        try
+        {
+            var ph = PlayerHandler.instance;
+            if (ph == null) return 0;
+            var mi = ph.GetType().GetMethod("GetStars");
+            if (mi != null)
+            {
+                object result = mi.Invoke(ph, null);
+                if (result is int i) return i;
+            }
+        }
+        catch { /* depends on E */ }
+        return 0;
     }
 
     private void LevelFailed()
@@ -135,6 +181,13 @@ public class Match3UI : MonoBehaviour
 
         uiGrid.cellSize = new Vector2(100, 100); 
         coinTextInstance = Instantiate(coinText, uiBackgroundContainer);   
+
+        // Star widget optional — depends on E's GetStars(). Refresh on win so the
+        // player sees the star tally bump even before returning to the main menu.
+        if (runStarsCounter != null)
+        {
+            runStarsCounter.SetValue(TryGetStars());
+        }
 
         Debug.Log("Level Completed.. Updating UI");
         // The panel itself waits for onScoreFinalized so the reward tally finishes first.

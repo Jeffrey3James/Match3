@@ -25,8 +25,24 @@ public class MainMenuUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI playerCoinsText;
     [SerializeField] private TextMeshProUGUI timeUntilNewLifeText;
 
+    [Header("HUD Counters (new)")]
+    [Tooltip("Optional. If set, coins are shown here with count-up + punch-scale, and the raw TMP field is ignored for coin writes.")]
+    [SerializeField] private HUDCounter coinCounter;
+    [Tooltip("Optional. If set, lives are shown here with count-up + punch-scale.")]
+    [SerializeField] private HUDCounter livesCounter;
+    [Tooltip("Optional. Depends on E's PlayerHandler.GetStars(); if E hasn't shipped, this stays at 0.")]
+    [SerializeField] private HUDCounter starsCounter;
+
     private float uiRefreshAccumulator;
     private const float uiRefreshInterval = 0.25f; // Refresh lives/timer labels 4x per second
+
+    // Snapshots used so HUDCounter only Tick()s when the value actually changes.
+    private int lastCoins;
+    private int lastLives;
+    private int lastStars;
+    private bool hudBootstrapped;
+
+    private const string HasSeenMainMenuPref = "HasSeenMainMenu";
 
     private void Start()
     {
@@ -34,6 +50,25 @@ public class MainMenuUI : MonoBehaviour
         ApplySessionState();
         SessionService.OnStateChanged += OnSessionStateChanged;
         Debug.Log("Setting Up Main Menu UI");
+
+        // Auto-play on very first launch: if the player has never seen the menu
+        // AND is at level 0, dive straight into level 0. Sets the pref so it never
+        // happens twice for the same install.
+        TryAutoPlayFirstLaunch();
+    }
+
+    private void TryAutoPlayFirstLaunch()
+    {
+        if (PlayerHandler.instance == null) return;
+        if (levelButton == null) return;
+        if (PlayerHandler.instance.GetPlayerLevel() != 0) return;
+        if (PlayerPrefs.GetInt(HasSeenMainMenuPref, 0) != 0) return;
+
+        PlayerPrefs.SetInt(HasSeenMainMenuPref, 1);
+        PlayerPrefs.Save();
+
+        Debug.Log("MainMenuUI: first launch — auto-loading Level 0.");
+        levelButton.onClick.Invoke();
     }
 
     private void OnDestroy()
@@ -108,11 +143,33 @@ public class MainMenuUI : MonoBehaviour
         var handler = PlayerHandler.instance;
         if (handler == null || handler.playerData == null) return;
 
-        if (playerLivesText != null)
-            playerLivesText.text = handler.playerData.playerLives.ToString();
+        int coins = handler.playerData.playerCoins;
+        int lives = handler.playerData.playerLives;
+        int stars = TryGetStars(handler);
 
-        if (playerCoinsText != null)
-            playerCoinsText.text = handler.playerData.playerCoins.ToString();
+        // Prefer HUDCounter widgets when assigned — they animate deltas + punch scale.
+        // Fall back to the raw TMP text fields so legacy scenes keep working.
+        if (!hudBootstrapped)
+        {
+            if (coinCounter != null) coinCounter.SetValue(coins);
+            if (livesCounter != null) livesCounter.SetValue(lives);
+            if (starsCounter != null) starsCounter.SetValue(stars);
+            lastCoins = coins; lastLives = lives; lastStars = stars;
+            hudBootstrapped = true;
+        }
+        else
+        {
+            if (coinCounter != null && coins != lastCoins) coinCounter.Tick(coins - lastCoins);
+            if (livesCounter != null && lives != lastLives) livesCounter.Tick(lives - lastLives);
+            if (starsCounter != null && stars != lastStars) starsCounter.Tick(stars - lastStars);
+            lastCoins = coins; lastLives = lives; lastStars = stars;
+        }
+
+        if (playerLivesText != null && livesCounter == null)
+            playerLivesText.text = lives.ToString();
+
+        if (playerCoinsText != null && coinCounter == null)
+            playerCoinsText.text = coins.ToString();
 
         if (timeUntilNewLifeText != null)
         {
@@ -121,6 +178,23 @@ public class MainMenuUI : MonoBehaviour
                 ? TimeSpan.FromSeconds(seconds).ToString(@"mm\:ss")
                 : "FULL";
         }
+    }
+
+    // depends on E — PlayerHandler.GetStars() is E's promised API. Swallow anything
+    // (missing method, null data) so C's PR never depends on E's PR merging first.
+    private static int TryGetStars(PlayerHandler handler)
+    {
+        try
+        {
+            var mi = handler.GetType().GetMethod("GetStars");
+            if (mi != null)
+            {
+                object result = mi.Invoke(handler, null);
+                if (result is int i) return i;
+            }
+        }
+        catch { /* depends on E */ }
+        return 0;
     }
 
     private void SetUpMainMenu()
