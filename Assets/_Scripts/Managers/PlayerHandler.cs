@@ -17,6 +17,20 @@ public class PlayerHandler : MonoBehaviour
     private float regenPollAccumulator;
     private const float regenPollInterval = 1f; // Check the countdown once per second
 
+    // ---- Meta systems (stars, streak, boosters, decorate) ----
+    // These are session-local shortcuts around playerData.*. The playerData fields are the
+    // source of truth and are what gets serialized by PlayerDataManager.
+    private bool _butlersGiftPending; // ephemeral; set when streak just hit exactly 3
+    private const int ButlersGiftStreakThreshold = 3;
+
+    // All meta mutations funnel through this so we never NRE against a not-yet-initialised
+    // PlayerDataManager (which is possible early during scene bootstrap).
+    private void PersistMetaChange()
+    {
+        if (PlayerDataManager.instance != null)
+            _ = PlayerDataManager.instance.UpdatePlayerData();
+    }
+
     private void Awake()
     {
         if (instance == null)
@@ -31,11 +45,28 @@ public class PlayerHandler : MonoBehaviour
 
         SceneManager.sceneLoaded += OnSceneLoaded;
         GameEventsManager.instance.gameEvents.onLevelCompleted += OnLevelCompleted;
+        GameEventsManager.instance.gameEvents.onLevelFailed += OnLevelFailed;
     }
 
     private void OnLevelCompleted()
     {
         playerData.playerLevel++;
+
+        // Meta rewards for winning a level: +1 star and +1 streak.
+        // Butler's Gift: exactly when the streak reaches the threshold, arm the flag so
+        // Match3 can consume it on the next level start (free striped gem placement).
+        AddStars(1);
+        IncrementStreak();
+        if (playerData != null && playerData.winStreak == ButlersGiftStreakThreshold)
+        {
+            _butlersGiftPending = true;
+        }
+    }
+
+    private void OnLevelFailed()
+    {
+        // Losing a level always resets the streak. Stars persist.
+        ResetStreak();
     }
 
     private void Update()
@@ -256,6 +287,205 @@ public class PlayerHandler : MonoBehaviour
     }
 
     #endregion
+
+    #region Stars
+
+    public int GetStars()
+    {
+        return playerData != null ? playerData.stars : 0;
+    }
+
+    public void AddStars(int amount)
+    {
+        if (playerData == null || amount <= 0) return;
+        playerData.stars += amount;
+        Debug.Log($"Added {amount} star(s). Total stars: {playerData.stars}");
+        PersistMetaChange();
+    }
+
+    /// <summary>Returns false when the player can't afford <paramref name="amount"/> and no stars are spent.</summary>
+    public bool SpendStars(int amount)
+    {
+        if (playerData == null || amount <= 0) return false;
+        if (playerData.stars < amount)
+        {
+            Debug.LogWarning($"Not enough stars to spend! Have {playerData.stars}, need {amount}.");
+            return false;
+        }
+        playerData.stars -= amount;
+        Debug.Log($"Spent {amount} star(s). Remaining stars: {playerData.stars}");
+        PersistMetaChange();
+        return true;
+    }
+
+    #endregion
+
+    #region Win Streak
+
+    public int GetWinStreak()
+    {
+        return playerData != null ? playerData.winStreak : 0;
+    }
+
+    public void IncrementStreak()
+    {
+        if (playerData == null) return;
+        playerData.winStreak++;
+        Debug.Log($"Win streak incremented to {playerData.winStreak}.");
+    }
+
+    public void ResetStreak()
+    {
+        if (playerData == null) return;
+        if (playerData.winStreak == 0) return;
+        Debug.Log($"Win streak reset from {playerData.winStreak} to 0.");
+        playerData.winStreak = 0;
+        PersistMetaChange();
+    }
+
+    /// <summary>
+    /// Board start reads this to decide whether to place a free striped gem.
+    /// Returns true exactly once per streak milestone; clears the flag on read.
+    /// </summary>
+    public bool ConsumeButlersGift()
+    {
+        if (!_butlersGiftPending) return false;
+        _butlersGiftPending = false;
+        Debug.Log("Butler's Gift consumed.");
+        return true;
+    }
+
+    #endregion
+
+    #region Boosters
+
+    private static string NormalizeBoosterKey(string key)
+    {
+        return string.IsNullOrEmpty(key) ? string.Empty : key.Trim().ToLowerInvariant();
+    }
+
+    public int GetBoosterCount(string key)
+    {
+        if (playerData == null) return 0;
+        switch (NormalizeBoosterKey(key))
+        {
+            case "rocket":    return playerData.rocketBoosters;
+            case "tnt":       return playerData.tntBoosters;
+            case "lightball": return playerData.lightballBoosters;
+            case "hammer":    return playerData.hammerBoosters;
+            default:
+                Debug.LogWarning($"Unknown booster key '{key}'.");
+                return 0;
+        }
+    }
+
+    public void AddBooster(string key, int amount)
+    {
+        if (playerData == null || amount <= 0) return;
+        switch (NormalizeBoosterKey(key))
+        {
+            case "rocket":    playerData.rocketBoosters    += amount; break;
+            case "tnt":       playerData.tntBoosters       += amount; break;
+            case "lightball": playerData.lightballBoosters += amount; break;
+            case "hammer":    playerData.hammerBoosters    += amount; break;
+            default:
+                Debug.LogWarning($"Unknown booster key '{key}'.");
+                return;
+        }
+        PersistMetaChange();
+    }
+
+    /// <summary>Returns false when the booster inventory is empty; nothing is consumed.</summary>
+    public bool ConsumeBooster(string key)
+    {
+        if (playerData == null) return false;
+        switch (NormalizeBoosterKey(key))
+        {
+            case "rocket":
+                if (playerData.rocketBoosters <= 0) return false;
+                playerData.rocketBoosters--;
+                break;
+            case "tnt":
+                if (playerData.tntBoosters <= 0) return false;
+                playerData.tntBoosters--;
+                break;
+            case "lightball":
+                if (playerData.lightballBoosters <= 0) return false;
+                playerData.lightballBoosters--;
+                break;
+            case "hammer":
+                if (playerData.hammerBoosters <= 0) return false;
+                playerData.hammerBoosters--;
+                break;
+            default:
+                Debug.LogWarning($"Unknown booster key '{key}'.");
+                return false;
+        }
+        PersistMetaChange();
+        return true;
+    }
+
+    #endregion
+
+    #region Decorate progress
+
+    public int GetDecorateProgress()
+    {
+        return playerData != null ? playerData.decorateProgress : 0;
+    }
+
+    public bool IsDecorateTaskComplete(int taskIndex)
+    {
+        if (playerData == null || taskIndex < 0 || taskIndex >= 32) return false;
+        return (playerData.decorateProgress & (1 << taskIndex)) != 0;
+    }
+
+    /// <summary>
+    /// Spends 1 star, sets the task bit, and persists. Returns false if the task is already
+    /// complete or the player can't afford the star cost. No partial state changes.
+    /// </summary>
+    public bool CompleteDecorateTask(int taskIndex)
+    {
+        if (playerData == null || taskIndex < 0 || taskIndex >= 32)
+        {
+            Debug.LogWarning($"CompleteDecorateTask: invalid taskIndex {taskIndex}.");
+            return false;
+        }
+        int bit = 1 << taskIndex;
+        if ((playerData.decorateProgress & bit) != 0)
+        {
+            Debug.Log($"Decorate task {taskIndex} already complete.");
+            return false;
+        }
+        if (!SpendStars(1)) return false; // SpendStars already persists
+        playerData.decorateProgress |= bit;
+        Debug.Log($"Decorate task {taskIndex} completed. Progress bitmask now {playerData.decorateProgress}.");
+        PersistMetaChange();
+        return true;
+    }
+
+    #endregion
+
+    #region Continue-offer counter (ephemeral)
+
+    public int GetContinueAttemptCount()
+    {
+        return playerData != null ? playerData.continueAttemptCount : 0;
+    }
+
+    public void IncrementContinueAttemptCount()
+    {
+        if (playerData == null) return;
+        playerData.continueAttemptCount++;
+    }
+
+    public void ResetContinueAttemptCount()
+    {
+        if (playerData == null) return;
+        playerData.continueAttemptCount = 0;
+    }
+
+    #endregion
 }
 
 [System.Serializable]
@@ -267,6 +497,24 @@ public class PlayerData
     public int playerCoins;
 
     public long playerLifeCountdown;
+
+    // ---- Meta systems (added by Agent E) ----
+    // Additive only: existing saves that do not carry these fields deserialize with 0/default,
+    // which is the correct starting value in every case.
+    public int stars;
+    public int winStreak;
+    public int decorateProgress; // bitmask: bit i = decorate task i done
+
+    // Ephemeral. It ships in the JSON payload because JsonUtility can't skip it, but it is
+    // reset on level start by LevelResultPanel/ContinueOfferPanel (Agent D) so its value on
+    // disk is only ever a stale in-flight value from a crashed session.
+    [System.NonSerialized] public int continueAttemptCount;
+
+    // Booster inventory (persistent). Keys map: rocket/tnt/lightball/hammer.
+    public int rocketBoosters;
+    public int tntBoosters;
+    public int lightballBoosters;
+    public int hammerBoosters;
 
     public PlayerData() { }
 
