@@ -144,6 +144,8 @@ Five components, all Inspector drag-and-drop:
 
 ### Scene setup
 
+> Field-by-field drag lists, a test checklist, and a troubleshooting table are in **[docs/WIRING-GUIDE.md](docs/WIRING-GUIDE.md)**. The summary below is enough to get oriented.
+
 **1. Loading screen.** Canvas → full-screen panel, `LoadingScreen` on the panel root.
 
 - Child Image with your logo/art → add `BreathingImage`. Nothing to assign; it auto-finds the `Image` on its own GameObject.
