@@ -1,4 +1,3 @@
-using JadedBelles.UI;
 using StroTheGoat;
 using System;
 using TMPro;
@@ -22,10 +21,6 @@ public class MainMenuUI : MonoBehaviour
 
     private void Start()
     {
-        // Check for a JadedBelles session token. Signed in → pull saves and continue.
-        // Not signed in (and not previously a guest) → the gate spawns the AuthPanel modal.
-        MainMenuAuthGate.Ensure();
-
         SetUpMainMenu();
         Debug.Log("Setting Up Main Menu UI");
     }
