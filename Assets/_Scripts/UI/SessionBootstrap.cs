@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Wires session validation into the loading screen.
+/// Wires session validation into the loading screen. Runs on the splash scene.
 ///
 /// Boot order:
 ///   1. Loading screen appears, breathing, bar at zero.
@@ -11,12 +11,11 @@ using UnityEngine.SceneManagement;
 ///      load as their own steps.
 ///   3. The bar crawls up at its constant speed as each step confirms.
 ///   4. Screen dismisses only when every step is done AND the bar visually reached 100%.
-///   5. THEN, and only then, the login panel is shown — and only if the session
-///      actually needs auth.
+///   5. MainMenu loads. Always — signed in, guest, or not signed in at all.
 ///
-/// A returning player with a valid (or merely expired-but-refreshable) token never sees
-/// the login panel at all. It stays deactivated the whole time, so nothing else in the
-/// UI has to know or care whether auth happened.
+/// This never shows a login panel. The splash is branding plus loading, nothing else.
+/// If the session couldn't be resolved, MainMenuUI shows the login panel once the menu
+/// is up, so the player lands somewhere recognisable instead of being met by a form.
 ///
 /// This replaces the old AuthManager, which used a fixed 3-second logo timer and cleared
 /// the player's tokens whenever a refresh failed — which logged people out just for being
@@ -25,19 +24,14 @@ using UnityEngine.SceneManagement;
 ///
 /// SETUP:
 ///   - Put this on a boot GameObject in the first scene (AuthSplashScreen).
-///   - Drag in the LoadingScreen and the LoginPanel.
-///   - Make sure the LoginPanel GameObject starts DISABLED in the scene.
-///   - Set Next Scene to the scene to load once the player is resolved.
+///   - Drag in the LoadingScreen.
+///   - Set Next Scene to the scene to load when loading finishes.
 /// </summary>
 public class SessionBootstrap : MonoBehaviour
 {
     [Header("References")]
     [Tooltip("The loading screen to drive. Falls back to LoadingScreen.Instance.")]
     [SerializeField] private LoadingScreen loadingScreen;
-
-    [Tooltip("The login panel. Leave its GameObject DISABLED in the scene — this " +
-             "component activates it only when auth is actually required.")]
-    [SerializeField] private LoginPanel loginPanel;
 
     [Header("Load Steps")]
     [Tooltip("Wait for the level catalog before dismissing the loading screen.")]
@@ -51,8 +45,8 @@ public class SessionBootstrap : MonoBehaviour
     [SerializeField, Min(1f)] private float stepTimeoutSeconds = 15f;
 
     [Header("Scene Flow")]
-    [Tooltip("Scene to load once the player is signed in or has chosen guest. Leave empty " +
-             "to stay in the current scene (e.g. if this lives on the MainMenu).")]
+    [Tooltip("Scene to load once loading finishes. Loads regardless of auth outcome — the " +
+             "menu handles an unresolved session. Leave empty to stay in this scene.")]
     [SerializeField] private string nextScene = "MainMenu";
 
     private const string StepSession = "session";
@@ -65,9 +59,6 @@ public class SessionBootstrap : MonoBehaviour
     private void Start()
     {
         if (loadingScreen == null) loadingScreen = LoadingScreen.Instance;
-
-        // Login panel must not be visible during loading.
-        if (loginPanel != null) loginPanel.Hide();
 
         if (loadingScreen == null)
         {
@@ -140,35 +131,9 @@ public class SessionBootstrap : MonoBehaviour
             yield return null;
         }
 
-        // --- Resolved players go straight through; everyone else stops at the login panel ---
-        if (SessionService.IsResolved)
-        {
-            Debug.Log("[SessionBootstrap] Session resolved (" + SessionService.State +
-                      "). Login panel stays hidden.");
-            if (loginPanel != null) loginPanel.Hide();
-            GoToNextScene();
-            yield break;
-        }
-
-        if (loginPanel == null)
-        {
-            Debug.LogWarning("[SessionBootstrap] Auth required but no LoginPanel is assigned. " +
-                             "Continuing as an unauthenticated player.");
-            GoToNextScene();
-            yield break;
-        }
-
-        Debug.Log("[SessionBootstrap] Auth required. Showing login panel.");
-        loginPanel.Show();
-
-        // Hold here until the player signs in, signs up, or picks guest. LoginPanel routes all
-        // three through SessionService, so we just watch the state rather than wiring callbacks
-        // into the panel.
-        while (!SessionService.IsResolved)
-            yield return null;
-
-        Debug.Log("[SessionBootstrap] Player resolved as " + SessionService.State + ". Continuing.");
-        loginPanel.Hide();
+        // Always continue to the menu. An unresolved session is not an error here — MainMenuUI
+        // picks it up and asks for credentials there.
+        Debug.Log("[SessionBootstrap] Loading finished with state " + SessionService.State + ".");
         GoToNextScene();
     }
 
@@ -181,19 +146,6 @@ public class SessionBootstrap : MonoBehaviour
         _sessionResolved = false;
         SessionService.Restore(_ => _sessionResolved = true);
         yield return WaitForFlagOrTimeout(() => _sessionResolved, "session");
-
-        if (SessionService.IsResolved || loginPanel == null)
-        {
-            if (loginPanel != null) loginPanel.Hide();
-            GoToNextScene();
-            yield break;
-        }
-
-        loginPanel.Show();
-        while (!SessionService.IsResolved)
-            yield return null;
-
-        loginPanel.Hide();
         GoToNextScene();
     }
 

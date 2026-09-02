@@ -12,20 +12,15 @@ Rule that applies everywhere: **never wire a Button's OnClick list in the Inspec
 
 ```
 Canvas  (Screen Space - Overlay)
-├── LoadingScreen          <- LoadingScreen.cs        [full-screen panel]
-│   ├── LogoImage          <- BreathingImage.cs       [Image, your art]
-│   ├── BarFill            <- LoadingBar.cs           [Image, Type = Filled]
-│   └── StatusText                                     [TextMeshProUGUI, optional]
-└── LoginPanel             <- LoginPanel.cs           [DISABLED in scene]
-    ├── UsernameField                                  [TMP_InputField]
-    ├── PasswordField                                  [TMP_InputField]
-    ├── LoginButton                                    [Button]
-    ├── SignUpButton                                   [Button]
-    ├── GuestButton                                    [Button, optional]
+└── LoadingScreen          <- LoadingScreen.cs        [full-screen panel]
+    ├── LogoImage          <- BreathingImage.cs       [Image, your art]
+    ├── BarFill            <- LoadingBar.cs           [Image, Type = Filled]
     └── StatusText                                     [TextMeshProUGUI, optional]
 
 SessionBootstrap  <- already in the scene (renamed from AuthManager)
 ```
+
+**No login panel here.** The splash is branding and loading only. Auth still *runs* here — the session is restored as a gated load step — but if it fails the player is never asked for credentials on the splash. That happens on the menu.
 
 ### 1. BreathingImage — on the logo
 
@@ -71,7 +66,48 @@ Turn on Pulse Alpha *or* Sway Rotation, not both — together they read as jitte
 
 Leave Persist Across Scenes off here — the splash screen's job ends when MainMenu loads.
 
-### 4. LoginPanel
+### 4. SessionBootstrap
+
+Already in the scene — it's the old AuthManager object with the script swapped.
+
+| Field | Set to |
+| --- | --- |
+| Loading Screen | the LoadingScreen |
+| Wait For Level Catalog | on |
+| Wait For Player Data | on |
+| Step Timeout Seconds | `15` |
+| Next Scene | `MainMenu` |
+
+### Check build settings
+
+`AuthSplashScreen`, `MainMenu`, and `GameScene` all need to be in **File → Build Profiles → Scene List**, with the splash first. Next Scene is matched by name — a typo throws at runtime.
+
+---
+
+## Scene 2 — MainMenu
+
+This is where the login panel lives now. A returning player never sees it.
+
+### Hierarchy
+
+```
+Canvas
+├── MenuContent                                        [empty GameObject wrapping the menu]
+│   ├── LevelButton
+│   ├── LivesText / CoinsText / TimerText
+│   └── AddLifeTestButton
+└── LoginPanel             <- LoginPanel.cs           [DISABLED in scene]
+    ├── UsernameField                                  [TMP_InputField]
+    ├── PasswordField                                  [TMP_InputField, Content Type = Password]
+    ├── LoginButton                                    [Button]
+    ├── SignUpButton                                   [Button]
+    ├── GuestButton                                    [Button, optional]
+    └── StatusText                                     [TextMeshProUGUI, optional]
+```
+
+`MenuContent` is just a parent object so the menu can be hidden in one call while the login panel is up. If you'd rather the menu stay visible behind the panel, skip it and leave the slot empty.
+
+### 5. LoginPanel
 
 | Field | Drag |
 | --- | --- |
@@ -86,30 +122,24 @@ Leave Persist Across Scenes off here — the splash screen's job ends when MainM
 | Pull Player Data On Login | on |
 | Remember Guest Choice | on |
 
-> **Disable the LoginPanel GameObject in the scene.** SessionBootstrap turns it on only when auth is actually needed. If you leave it enabled, returning players see it flash.
+> **Disable the LoginPanel GameObject in the scene.** `MainMenuUI` turns it on only when the session didn't resolve. Left enabled, every returning player sees it flash.
 
-Leave Resolve Session On Start **off**. It's a fallback for scenes with no SessionBootstrap; turning it on here makes two things race to resolve the session.
+Leave Resolve Session On Start **off** — the splash already resolved the session, and turning it on makes the panel re-check redundantly.
 
-### 5. SessionBootstrap
+### 6. MainMenuUI
 
-Already in the scene — it's the old AuthManager object with the script swapped.
+Two new slots.
 
-| Field | Set to |
+| Field | Drag |
 | --- | --- |
-| Loading Screen | the LoadingScreen |
 | Login Panel | the LoginPanel |
-| Wait For Level Catalog | on |
-| Wait For Player Data | on |
-| Step Timeout Seconds | `15` |
-| Next Scene | `MainMenu` |
+| Menu Content Root | the MenuContent object (optional) |
 
-### Check build settings
-
-`AuthSplashScreen`, `MainMenu`, and `GameScene` all need to be in **File → Build Profiles → Scene List**, with the splash first. Next Scene is matched by name — a typo throws at runtime.
+`MainMenuUI` shows the panel when `SessionService` has no usable session, hides it the moment the player signs in or picks guest, and re-shows it on logout.
 
 ---
 
-## Scene 2 — GameScene
+## Scene 3 — GameScene
 
 ### Hierarchy
 
@@ -124,7 +154,7 @@ Canvas
         └── WatchAdButton
 ```
 
-### 6. LevelResultPanel — on the game-over window root
+### 7. LevelResultPanel — on the game-over window root
 
 | Field | Set to |
 | --- | --- |
@@ -146,7 +176,7 @@ Canvas
 
 Set the Layout Group's **Child Alignment** to Middle Center so 2- and 3-button states both stay centred.
 
-### 7. Match3UI
+### 8. Match3UI
 
 One new slot. The old Game Over slots are gone.
 
@@ -162,11 +192,11 @@ If you forget, it self-finds one in the scene and logs an error if there isn't o
 
 | Test | How | Expect |
 | --- | --- | --- |
-| Fresh install | Clear PlayerPrefs, play from splash | Loading screen → login panel |
-| Returning player | Sign in, stop, play again | Loading screen → **straight to MainMenu**, no login panel |
+| Fresh install | Clear PlayerPrefs, play from splash | Splash + bar → **MainMenu**, login panel on top |
+| Returning player | Sign in, stop, play again | Splash + bar → MainMenu, **no login panel** |
 | Offline | Airplane mode, play again | Still signed in. Console: "Could not reach the API… keeping the saved login" |
-| Guest | Tap Guest, stop, play again | Straight to MainMenu, no panel |
-| Sign out | Logout, then replay | Login panel returns |
+| Guest | Tap Guest, stop, play again | MainMenu with no panel |
+| Sign out | Logout from the menu | Menu hides, login panel returns immediately |
 | Bar gating | Play on fast wifi | Bar still crawls, never snaps to full |
 | Win | Beat a level | Next Level + Main Menu only. **No ad button** |
 | Loss | Run out of moves | Retry + Main Menu + ad button (if eligible) |
@@ -183,8 +213,9 @@ Clear PlayerPrefs from **Edit → Clear All PlayerPrefs**, or delete keys `jb_ac
 | Bar never moves | Image Type isn't **Filled** |
 | Bar fills instantly | Fill Speed too high, or you called `SetImmediate` |
 | Stuck on loading screen forever | A step never completed. Console names it after 15s |
-| Login panel flashes then hides | The GameObject was left **enabled** in the scene |
+| Login panel flashes then hides | The GameObject was left **enabled** in the MainMenu scene |
 | Login panel never appears | Session resolved — that's correct. Sign out to see it |
+| Login panel appears on the **splash** | Old build. Auth runs there but the panel belongs to MainMenu |
 | Buttons fire twice | OnClick wired in the Inspector *and* in code |
 | Gap where a hidden button was | No Layout Group on Button Container |
 | Never leaves splash | `Next Scene` typo, or MainMenu not in the Scene List |

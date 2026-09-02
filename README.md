@@ -35,7 +35,16 @@ Two extra scenes are **not** in the build and must not be deleted:
 - `LevelConfigScene` — the canvas the level editor renders its preview into.
 - `Match3SceneTemplate _DO NOT DELETE_` — template for new board scenes.
 
-**`SessionBootstrap` is the only auth flow.** It lives on the `SessionBootstrap` GameObject in the splash scene and owns the whole boot: it shows the loading screen, resolves the session, loads the level catalog and player data as gated steps, and then either continues straight to `MainMenu` or stops to show the login panel. See [Loading screen and auth UI](#loading-screen-and-auth-ui).
+**`SessionBootstrap` is the only auth flow.** It lives in the splash scene, shows the loading screen, and resolves the session, level catalog, and player data as gated steps. Then it loads `MainMenu` — **always**, whatever the auth outcome.
+
+The split is deliberate:
+
+| Stage | Responsibility |
+| --- | --- |
+| `AuthSplashScreen` | Branding and loading. Auth *runs* here, but the player is never asked for credentials. |
+| `MainMenu` | If the session resolved, nothing happens. If it didn't, `MainMenuUI` shows the login panel. |
+
+So a returning player sees splash → bar → menu and is never interrupted, and a new player lands on a recognisable menu rather than being met by a form. See [Loading screen and auth UI](#loading-screen-and-auth-ui).
 
 The old `AuthManager` was removed. It gated the boot on a fixed 3-second logo timer regardless of how long the work actually took, and — worse — it called `TokenStore.Clear()` whenever a token refresh failed, so a player who opened the game with no signal got silently logged out. `SessionService` now tells "the server rejected this session" apart from "I couldn't reach the server" and only clears tokens for the first.
 
@@ -166,11 +175,11 @@ Five components, all Inspector drag-and-drop:
 
 > **Do not wire the Buttons' OnClick lists in the Inspector.** `LoginPanel.Awake` adds its own listeners. Wiring both fires every action twice.
 
-**3. Boot object.** The `SessionBootstrap` GameObject already exists in `AuthSplashScreen` (it's the old `AuthManager` object, with the script swapped). Drag in the `LoadingScreen` and the `LoginPanel`, and confirm **Next Scene** is `MainMenu`.
+**3. Boot object.** The `SessionBootstrap` GameObject already exists in `AuthSplashScreen` (it's the old `AuthManager` object, with the script swapped). Drag in the `LoadingScreen` and confirm **Next Scene** is `MainMenu`.
 
-> **Leave the LoginPanel GameObject disabled in the scene.** `SessionBootstrap` activates it only when auth is genuinely required.
+**4. Login panel — in the `MainMenu` scene, not the splash.** Same slots as above. Leave its GameObject **disabled**; `MainMenuUI` activates it only when the session didn't resolve, and hides it again the moment the player signs in or picks guest. Drag it into `MainMenuUI` → **Login Panel**, and optionally wrap your menu controls in one object dragged into **Menu Content Root** so they hide behind the panel.
 
-Set **Next Scene** empty if you ever put this component on a scene it shouldn't navigate away from. If the `LoadingScreen` reference is missing it falls back to a no-visuals path that still resolves auth and still changes scene, so a forgotten drag can't strand the player on the splash.
+If the `LoadingScreen` reference is missing, `SessionBootstrap` falls back to a no-visuals path that still resolves auth and still changes scene, so a forgotten drag can't strand the player on the splash.
 
 ---
 
