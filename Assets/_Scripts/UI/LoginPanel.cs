@@ -43,17 +43,14 @@ public class LoginPanel : MonoBehaviour
     [SerializeField] private GameObject panelRoot;
 
     [Header("Behavior")]
-    [Tooltip("On start, restore a saved session and hide this panel if it's still valid.")]
-    [SerializeField] private bool skipIfAlreadySignedIn = true;
-    [Tooltip("Keep the panel hidden while the saved session is being validated, so returning " +
-             "players never see a login flash. Turn off to always show the panel until verified.")]
-    [SerializeField] private bool hideWhileRestoringSession = true;
+    [Tooltip("OFF (recommended): SessionBootstrap drives this panel via the loading screen and " +
+             "only shows it when auth is actually needed. ON: this panel resolves the session " +
+             "itself on Start — use only if there's no SessionBootstrap in the scene.")]
+    [SerializeField] private bool resolveSessionOnStart = false;
     [Tooltip("After a successful login or sign up, pull the player's remote save.")]
     [SerializeField] private bool pullPlayerDataOnLogin = true;
-    [Tooltip("Remember a guest choice so the panel doesn't reappear on later MainMenu loads.")]
+    [Tooltip("Remember a guest choice so the panel doesn't reappear on later loads.")]
     [SerializeField] private bool rememberGuestChoice = true;
-
-    private const string GuestPrefKey = "jb_played_as_guest";
 
     private bool _busy;
 
@@ -84,110 +81,31 @@ public class LoginPanel : MonoBehaviour
     {
         WarnAboutMissingSlots();
 
-        // Persistent login: tokens live in PlayerPrefs (TokenStore) and survive app restarts.
-        // HasSession() only proves the strings exist, not that they still work, so we verify
-        // against the API. JadedBellesApiClient auto-refreshes on a 401 and retries once, so a
-        // merely-expired access token is renewed silently and the player stays signed in.
-        if (skipIfAlreadySignedIn && TokenStore.HasSession())
+        // Default path: SessionBootstrap already resolved the session behind the loading
+        // screen and calls Show() only if auth is genuinely required. Stay hidden.
+        if (!resolveSessionOnStart)
         {
-            RestoreSession();
+            if (SessionService.IsResolved) Hide();
             return;
         }
 
-        // Previously chose guest → don't nag.
-        if (rememberGuestChoice && PlayerPrefs.GetInt(GuestPrefKey, 0) == 1)
+        // Standalone fallback for scenes with no SessionBootstrap.
+        SetBusy(true, "Checking session...");
+        SessionService.Restore(state =>
         {
-            Hide();
-            return;
-        }
+            SetBusy(false, null);
 
-        Show();
-    }
-
-    /// <summary>
-    /// Validates the stored session against the API. Succeeds silently for returning players
-    /// (including when the access token had expired and was refreshed), and only falls back to
-    /// the login panel when the refresh token is genuinely dead.
-    /// </summary>
-    private void RestoreSession()
-    {
-        // Avoid a login-panel flash for the common case where the session is fine.
-        if (hideWhileRestoringSession) Hide();
-        else SetBusy(true, "Restoring session...");
-
-        JadedBellesApiClient.Instance.GetCurrentUser(
-            onSuccess: response =>
+            if (SessionService.IsResolved)
             {
-                if (!hideWhileRestoringSession) SetBusy(false, null);
-
-                if (response == null || !response.success)
-                {
-                    // Server answered but rejected the session.
-                    FallBackToSignIn("Please sign in again.");
-                    return;
-                }
-
-                string who = response.data != null
-                    ? (!string.IsNullOrEmpty(response.data.displayName)
-                        ? response.data.displayName
-                        : response.data.email)
-                    : "player";
-
-                Debug.Log("[LoginPanel] Session restored for " + who);
-                SetStatus("Welcome back, " + who + ".");
-
-                // A live account supersedes any earlier guest choice.
-                PlayerPrefs.DeleteKey(GuestPrefKey);
-                PlayerPrefs.Save();
-
-                PullPlayerData();
+                if (SessionService.IsSignedIn) PullPlayerData();
                 Hide();
-            },
-            onError: error =>
-            {
-                if (!hideWhileRestoringSession) SetBusy(false, null);
+                return;
+            }
 
-                // Distinguish "the network is down" from "this session is dead". On a transport
-                // failure we keep the tokens so the player stays logged in and can retry offline;
-                // only a real auth rejection clears them.
-                if (IsLikelyNetworkFailure(error))
-                {
-                    Debug.LogWarning("[LoginPanel] Could not reach the API to verify the session; " +
-                                     "keeping the saved login. " + error);
-                    PullPlayerData();
-                    Hide();
-                    return;
-                }
-
-                Debug.Log("[LoginPanel] Stored session is no longer valid: " + error);
-                FallBackToSignIn("Your session expired. Please sign in again.");
-            });
-    }
-
-    /// <summary>Clears the dead session and puts the player back on the login panel.</summary>
-    private void FallBackToSignIn(string message)
-    {
-        TokenStore.Clear();
-        Show();
-        SetStatus(message, isError: true);
-    }
-
-    /// <summary>
-    /// Heuristic for "couldn't reach the server" vs "server said no". We only want to wipe a
-    /// persistent login for the latter — a player on a plane shouldn't get logged out.
-    /// </summary>
-    private static bool IsLikelyNetworkFailure(string error)
-    {
-        if (string.IsNullOrEmpty(error)) return false;
-        string e = error.ToLowerInvariant();
-        return e.Contains("cannot connect")
-            || e.Contains("connection")
-            || e.Contains("timeout")
-            || e.Contains("timed out")
-            || e.Contains("unable to complete")
-            || e.Contains("network")
-            || e.Contains("dns")
-            || e.Contains("host");
+            Show();
+            if (state == SessionService.SessionState.NeedsAuth && SessionService.HasStoredSession() == false)
+                SetStatus("");
+        });
     }
 
     // ------------------------------------------------------------------
@@ -257,12 +175,7 @@ public class LoginPanel : MonoBehaviour
     {
         if (_busy) return;
 
-        if (rememberGuestChoice)
-        {
-            PlayerPrefs.SetInt(GuestPrefKey, 1);
-            PlayerPrefs.Save();
-        }
-
+        SessionService.MarkGuest(rememberGuestChoice);
         Debug.Log("[LoginPanel] Continuing as guest.");
         Hide();
     }
@@ -290,9 +203,8 @@ public class LoginPanel : MonoBehaviour
         SetStatus("Welcome, " + who + ".");
         Debug.Log("[LoginPanel] Authenticated as " + who);
 
-        // A real account supersedes any earlier guest choice.
-        PlayerPrefs.DeleteKey(GuestPrefKey);
-        PlayerPrefs.Save();
+        // Single source of truth — also clears any earlier guest choice.
+        SessionService.MarkSignedIn(who);
 
         // Clear the password field so it isn't sitting in memory / on screen.
         if (passwordField != null) passwordField.text = "";
@@ -421,8 +333,7 @@ public class LoginPanel : MonoBehaviour
 
     private void FinishLogout()
     {
-        PlayerPrefs.DeleteKey(GuestPrefKey);
-        PlayerPrefs.Save();
+        SessionService.MarkSignedOut();
         if (usernameField != null) usernameField.text = "";
         if (passwordField != null) passwordField.text = "";
         Show();
