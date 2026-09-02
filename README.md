@@ -26,7 +26,7 @@ Three scenes are in the build, in order:
 
 | Scene | Role |
 | --- | --- |
-| `AuthSplashScreen` | Boot scene. Hosts every persistent singleton, shows the logo for ~3s, restores a saved session silently in the background, then loads `MainMenu`. |
+| `AuthSplashScreen` | Boot scene. Hosts every persistent singleton, shows the loading screen, resolves the session, then loads `MainMenu`. |
 | `MainMenu` | Level select, player stats (lives, coins), navigation. |
 | `GameScene` | The actual match-3 board. |
 
@@ -35,9 +35,9 @@ Two extra scenes are **not** in the build and must not be deleted:
 - `LevelConfigScene` — the canvas the level editor renders its preview into.
 - `Match3SceneTemplate _DO NOT DELETE_` — template for new board scenes.
 
-On the splash screen, `AuthManager` runs a 3-second countdown and a session check in parallel. If a refresh token exists in `TokenStore`, it silently refreshes; otherwise the player continues as a **guest**. The menu loads only when both finish, so a slow network never blocks past the logo. Guests are never gated.
+**`SessionBootstrap` is the only auth flow.** It lives on the `SessionBootstrap` GameObject in the splash scene and owns the whole boot: it shows the loading screen, resolves the session, loads the level catalog and player data as gated steps, and then either continues straight to `MainMenu` or stops to show the login panel. See [Loading screen and auth UI](#loading-screen-and-auth-ui).
 
-The newer `SessionBootstrap` + `LoadingScreen` pair does the same job with a visible, speed-gated progress bar and owns the decision of whether the login panel ever appears — see [Loading screen and auth UI](#loading-screen-and-auth-ui). Use one or the other on a given scene, not both.
+The old `AuthManager` was removed. It gated the boot on a fixed 3-second logo timer regardless of how long the work actually took, and — worse — it called `TokenStore.Clear()` whenever a token refresh failed, so a player who opened the game with no signal got silently logged out. `SessionService` now tells "the server rejected this session" apart from "I couldn't reach the server" and only clears tokens for the first.
 
 ---
 
@@ -138,7 +138,7 @@ Five components, all Inspector drag-and-drop:
 | `UI/BreathingImage.cs` | Organic pulse for the loading art — scale, optional alpha and rotation sway. |
 | `UI/LoadingBar.cs` | Filled Image that fills upward, speed-gated against real progress. |
 | `UI/LoadingScreen.cs` | Step registry and dismissal gating. Singleton via `LoadingScreen.Instance`. |
-| `UI/SessionBootstrap.cs` | Runs session restore as a load step, then shows the login panel only if needed. |
+| `UI/SessionBootstrap.cs` | Owns the whole boot: load steps, login panel, and the scene transition. |
 | `UI/LoginPanel.cs` | Two fields, two buttons. Purely reactive — it does not decide when to appear. |
 | `Networking/SessionService.cs` | Single source of truth for auth state. Not a MonoBehaviour. |
 
@@ -164,9 +164,11 @@ Five components, all Inspector drag-and-drop:
 
 > **Do not wire the Buttons' OnClick lists in the Inspector.** `LoginPanel.Awake` adds its own listeners. Wiring both fires every action twice.
 
-**3. Boot object.** Empty GameObject with `SessionBootstrap`. Drag in the `LoadingScreen` and the `LoginPanel`.
+**3. Boot object.** The `SessionBootstrap` GameObject already exists in `AuthSplashScreen` (it's the old `AuthManager` object, with the script swapped). Drag in the `LoadingScreen` and the `LoginPanel`, and confirm **Next Scene** is `MainMenu`.
 
 > **Leave the LoginPanel GameObject disabled in the scene.** `SessionBootstrap` activates it only when auth is genuinely required.
+
+Set **Next Scene** empty if you ever put this component on a scene it shouldn't navigate away from. If the `LoadingScreen` reference is missing it falls back to a no-visuals path that still resolves auth and still changes scene, so a forgotten drag can't strand the player on the splash.
 
 ### How progress is gated
 
@@ -246,7 +248,7 @@ Assets/
     Levels/           LevelDataModels.cs (JSON DTOs), GemTypeRegistry.cs (name -> asset)
     Managers/         LevelHandler (level catalog), PlayerHandler, AudioManager
     Networking/       JadedBellesApiClient, ApiModels, TokenStore, SessionService
-    Utils/            AuthManager, PlayerDataManager, Timer, StroTheGoatUtils
+    Utils/            PlayerDataManager, Timer, StroTheGoatUtils
     Gems/ GemTypes/   Gem behaviour, gem/obstacle/power-up ScriptableObject types
     GridSystem/       Grid math
     UI/               Menus, HUD, LoginPanel, LoadingScreen/LoadingBar/BreathingImage,
@@ -283,7 +285,7 @@ No profile yet — create one. Nothing in the codebase is iOS-hostile.
 
 ## Gotchas
 
-- **Always launch from `AuthSplashScreen`.** Singletons and the level catalog are created there.
+- **Always launch from `AuthSplashScreen`.** Singletons, the level catalog, and `SessionBootstrap` all live there. Nothing else advances to `MainMenu`.
 - **Editor code must be guarded.** Anything touching `UnityEditor` needs `#if UNITY_EDITOR` or device and WebGL builds will fail to compile. This has bitten this project before.
 - **New gems/obstacles must be added to `Resources/GemTypeRegistry.asset`**, otherwise level JSON referencing them silently fails to hydrate.
 - **`Assets.zip` (88 MB) is committed at the repo root.** It bloats every clone and is almost certainly a leftover backup. Consider deleting it and adding `*.zip` to `.gitignore`.
@@ -293,7 +295,7 @@ No profile yet — create one. Nothing in the codebase is iOS-hostile.
 
 ## Known TODO
 
-- **Loading screen and login panel canvases still need building in the Editor.** All the code exists and is Inspector-driven — see [Loading screen and auth UI](#loading-screen-and-auth-ui) for exactly which slots to fill.
-- Decide whether `AuthManager`'s splash-screen session check is retired in favour of `SessionBootstrap`; right now both paths exist.
+- **Loading screen and login panel canvases still need building in the Editor.** All the code exists and is Inspector-driven — see [Loading screen and auth UI](#loading-screen-and-auth-ui) for exactly which slots to fill. Until then `SessionBootstrap` runs its no-visuals fallback path and boots straight to `MainMenu`.
+- `CountdownTimer` in `StroTheGoatUtils.cs` lost its only consumer when `AuthManager` was removed. Harmless, but it's dead code now.
 - WebGL and iOS build profiles need to be created.
 - Google Play Console registration deadline is **Sept 30, 2026**. Package name `com.JadedBelles.GemJam`.

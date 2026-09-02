@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Wires session validation into the loading screen.
@@ -17,10 +18,16 @@ using UnityEngine;
 /// the login panel at all. It stays deactivated the whole time, so nothing else in the
 /// UI has to know or care whether auth happened.
 ///
+/// This replaces the old AuthManager, which used a fixed 3-second logo timer and cleared
+/// the player's tokens whenever a refresh failed — which logged people out just for being
+/// offline. SessionService now distinguishes "server said no" from "couldn't reach the
+/// server" and only clears tokens for the former.
+///
 /// SETUP:
-///   - Put this on a boot GameObject in the first scene.
+///   - Put this on a boot GameObject in the first scene (AuthSplashScreen).
 ///   - Drag in the LoadingScreen and the LoginPanel.
 ///   - Make sure the LoginPanel GameObject starts DISABLED in the scene.
+///   - Set Next Scene to the scene to load once the player is resolved.
 /// </summary>
 public class SessionBootstrap : MonoBehaviour
 {
@@ -43,11 +50,17 @@ public class SessionBootstrap : MonoBehaviour
     [Tooltip("Seconds to wait for a step before giving up and letting the game continue.")]
     [SerializeField, Min(1f)] private float stepTimeoutSeconds = 15f;
 
+    [Header("Scene Flow")]
+    [Tooltip("Scene to load once the player is signed in or has chosen guest. Leave empty " +
+             "to stay in the current scene (e.g. if this lives on the MainMenu).")]
+    [SerializeField] private string nextScene = "MainMenu";
+
     private const string StepSession = "session";
     private const string StepPlayerData = "playerData";
     private const string StepLevels = "levels";
 
     private bool _sessionResolved;
+    private bool _sceneLoadStarted;
 
     private void Start()
     {
@@ -59,7 +72,7 @@ public class SessionBootstrap : MonoBehaviour
         if (loadingScreen == null)
         {
             Debug.LogWarning("[SessionBootstrap] No LoadingScreen found. Running auth without a loading screen.");
-            SessionService.Restore(_ => ShowLoginPanelIfNeeded());
+            StartCoroutine(BootWithoutLoadingScreen());
             return;
         }
 
@@ -127,31 +140,76 @@ public class SessionBootstrap : MonoBehaviour
             yield return null;
         }
 
-        ShowLoginPanelIfNeeded();
-    }
-
-    /// <summary>
-    /// The whole point: if the session resolved to signed-in or guest, the login panel is
-    /// never activated. Nothing else in the UI has to branch on auth state.
-    /// </summary>
-    private void ShowLoginPanelIfNeeded()
-    {
+        // --- Resolved players go straight through; everyone else stops at the login panel ---
         if (SessionService.IsResolved)
         {
-            Debug.Log("[SessionBootstrap] Session already resolved (" + SessionService.State +
+            Debug.Log("[SessionBootstrap] Session resolved (" + SessionService.State +
                       "). Login panel stays hidden.");
             if (loginPanel != null) loginPanel.Hide();
-            return;
+            GoToNextScene();
+            yield break;
         }
 
         if (loginPanel == null)
         {
-            Debug.LogWarning("[SessionBootstrap] Auth required but no LoginPanel is assigned.");
-            return;
+            Debug.LogWarning("[SessionBootstrap] Auth required but no LoginPanel is assigned. " +
+                             "Continuing as an unauthenticated player.");
+            GoToNextScene();
+            yield break;
         }
 
         Debug.Log("[SessionBootstrap] Auth required. Showing login panel.");
         loginPanel.Show();
+
+        // Hold here until the player signs in, signs up, or picks guest. LoginPanel routes all
+        // three through SessionService, so we just watch the state rather than wiring callbacks
+        // into the panel.
+        while (!SessionService.IsResolved)
+            yield return null;
+
+        Debug.Log("[SessionBootstrap] Player resolved as " + SessionService.State + ". Continuing.");
+        loginPanel.Hide();
+        GoToNextScene();
+    }
+
+    /// <summary>
+    /// Degraded path for a scene with no LoadingScreen assigned. Same auth outcome, just no
+    /// visuals — so a missing reference can't hard-block the boot.
+    /// </summary>
+    private IEnumerator BootWithoutLoadingScreen()
+    {
+        _sessionResolved = false;
+        SessionService.Restore(_ => _sessionResolved = true);
+        yield return WaitForFlagOrTimeout(() => _sessionResolved, "session");
+
+        if (SessionService.IsResolved || loginPanel == null)
+        {
+            if (loginPanel != null) loginPanel.Hide();
+            GoToNextScene();
+            yield break;
+        }
+
+        loginPanel.Show();
+        while (!SessionService.IsResolved)
+            yield return null;
+
+        loginPanel.Hide();
+        GoToNextScene();
+    }
+
+    private void GoToNextScene()
+    {
+        if (string.IsNullOrWhiteSpace(nextScene))
+        {
+            // No scene change wanted — this bootstrap is running in the scene it belongs to.
+            return;
+        }
+
+        if (_sceneLoadStarted) return;
+        _sceneLoadStarted = true;
+
+        Debug.Log("[SessionBootstrap] Loading scene: " + nextScene);
+        SceneManager.LoadScene(nextScene);
     }
 
     // ------------------------------------------------------------------
