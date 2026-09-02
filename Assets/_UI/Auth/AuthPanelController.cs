@@ -29,10 +29,12 @@ namespace JadedBelles.UI
         [Tooltip("After a successful login, pull the player's remote save so lives / coins / progress reflect their account.")]
         [SerializeField] private bool _pullPlayerDataOnLogin = true;
 
+        // Field-initialized so they're safe when the component is added at runtime via AddComponent
+        // (Unity only auto-creates UnityEvents from serialized data, which doesn't exist for runtime instances).
         [Header("Events (optional, wire in Inspector if you want)")]
-        public UnityEvent OnLoggedIn;
-        public UnityEvent OnLoggedOut;
-        public UnityEvent OnGuestChosen;
+        public UnityEvent OnLoggedIn = new UnityEvent();
+        public UnityEvent OnLoggedOut = new UnityEvent();
+        public UnityEvent OnGuestChosen = new UnityEvent();
 
         // ---- Root
         private VisualElement _root;
