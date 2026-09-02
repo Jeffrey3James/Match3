@@ -28,6 +28,12 @@ namespace JadedBelles.UI
         [Tooltip("After a successful login, pull the player's remote save so lives / coins / progress reflect their account.")]
         [SerializeField] private bool _pullPlayerDataOnLogin = true;
 
+        [Header("Assets (drag in Inspector to avoid Resources.Load timing issues)")]
+        [Tooltip("UXML for the panel. If left empty, the controller falls back to Resources.Load(\"UI/Auth/AuthPanel\").")]
+        [SerializeField] private VisualTreeAsset _uxmlAsset;
+        [Tooltip("USS for the panel. If left empty, the controller falls back to Resources.Load(\"UI/Auth/AuthPanel\").")]
+        [SerializeField] private StyleSheet _ussAsset;
+
         // Field-initialized so they're safe when the component is added at runtime via AddComponent
         // (Unity only auto-creates UnityEvents from serialized data, which doesn't exist for runtime instances).
         [Header("Events (optional, wire in Inspector if you want)")]
@@ -82,19 +88,22 @@ namespace JadedBelles.UI
                 yield break;
             }
 
-            // Fallback clone in case UIDocument didn't populate the tree (e.g. no visualTreeAsset assigned in Editor,
-            // or we're wired up in an unusual order). Load the UXML from Resources and clone it ourselves.
+            // Preferred: an Inspector-assigned UXML on this component. Fallbacks:
+            //   1. UIDocument.visualTreeAsset (dragged onto the UIDocument in the Editor).
+            //   2. Resources.Load("UI/Auth/AuthPanel") — the last-ditch runtime path.
             if (rootVisual.childCount == 0)
             {
-                var uxmlAsset = doc.visualTreeAsset != null
-                    ? doc.visualTreeAsset
-                    : Resources.Load<VisualTreeAsset>("UI/Auth/AuthPanel");
+                var uxmlAsset = _uxmlAsset != null
+                    ? _uxmlAsset
+                    : (doc.visualTreeAsset != null
+                        ? doc.visualTreeAsset
+                        : Resources.Load<VisualTreeAsset>("UI/Auth/AuthPanel"));
                 if (uxmlAsset != null)
                     uxmlAsset.CloneTree(rootVisual);
             }
 
-            // Attach the stylesheet from Resources so callers don't have to wire it up per scene.
-            var uss = Resources.Load<StyleSheet>("UI/Auth/AuthPanel");
+            // Same idea for the stylesheet: Inspector reference first, Resources second.
+            var uss = _ussAsset != null ? _ussAsset : Resources.Load<StyleSheet>("UI/Auth/AuthPanel");
             if (uss != null && !rootVisual.styleSheets.Contains(uss))
                 rootVisual.styleSheets.Add(uss);
 
@@ -123,6 +132,16 @@ namespace JadedBelles.UI
         {
             _hideWhenSignedIn = hideWhenSignedIn;
             _pullPlayerDataOnLogin = pullPlayerDataOnLogin;
+        }
+
+        /// <summary>
+        /// Inject UXML/USS references from the outside (e.g. from <see cref="MainMenuAuthGate"/>'s
+        /// Inspector-dragged fields) so we don't depend on Resources.Load timing.
+        /// </summary>
+        public void SetAssets(VisualTreeAsset uxml, StyleSheet uss)
+        {
+            if (uxml != null) _uxmlAsset = uxml;
+            if (uss != null) _ussAsset = uss;
         }
 
         private void OnDisable()

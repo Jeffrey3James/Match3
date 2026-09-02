@@ -2,6 +2,20 @@ using JadedBelles.Networking;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+// ------------------------------------------------------------------
+// KNOWN ISSUE (JadedBelles ecosystem, 2026-09-01)
+// ------------------------------------------------------------------
+// Fully-runtime auth panel wiring (Resources.Load + AddComponent<UIDocument>
+// + AddComponent<AuthPanelController>) has been flaky across the JadedBelles
+// game ecosystem in this project: UIDocument's rootVisualElement does not
+// consistently contain the cloned visual tree by the time our controller
+// binds, even with a one-frame yield in OnEnable. The persistent workaround
+// is to place ONE pre-configured MainMenuAuthGate GameObject in each scene
+// that needs auth (MainMenu today) and DRAG the UXML/USS/PanelSettings
+// assets onto its Inspector slots. Attach-at-runtime remains supported as
+// a fallback, but Inspector references are the reliable path.
+// ------------------------------------------------------------------
+
 namespace JadedBelles.UI
 {
     /// <summary>
@@ -24,15 +38,43 @@ namespace JadedBelles.UI
     {
         private const string GuestPrefKey = "jb_played_as_guest";
 
+        [Header("Assets (drag in Inspector — reliable path)")]
+        [Tooltip("AuthPanel.uxml. Drag Assets/Resources/UI/Auth/AuthPanel.uxml here.")]
+        [SerializeField] private VisualTreeAsset _uxmlAsset;
+        [Tooltip("AuthPanel.uss. Drag Assets/Resources/UI/Auth/AuthPanel.uss here.")]
+        [SerializeField] private StyleSheet _ussAsset;
+        [Tooltip("Optional Panel Settings asset. If empty, one is built in memory at runtime.")]
+        [SerializeField] private PanelSettings _panelSettings;
+
         private static MainMenuAuthGate _instance;
         private AuthPanelController _panel;
 
-        /// <summary>Idempotent bootstrap. Safe to call from <c>MainMenuUI.Start()</c>.</summary>
+        /// <summary>
+        /// Idempotent bootstrap. Only creates a runtime gate if no scene-placed gate exists.
+        /// If the MainMenu scene contains a pre-configured MainMenuAuthGate (with UXML/USS/
+        /// PanelSettings dragged in the Inspector), <see cref="MainMenuUI"/> should NOT call this
+        /// — or, if it does, this call becomes a no-op.
+        /// </summary>
         public static void Ensure()
         {
             if (_instance != null) return;
+
+            // Prefer a scene-placed gate if the developer dragged one in.
+            var existing = FindObjectOfType<MainMenuAuthGate>();
+            if (existing != null)
+            {
+                _instance = existing;
+                return;
+            }
+
             var go = new GameObject("MainMenuAuthGate");
             _instance = go.AddComponent<MainMenuAuthGate>();
+        }
+
+        private void Awake()
+        {
+            // If a scene-placed gate wakes up first, register it as the singleton.
+            if (_instance == null) _instance = this;
         }
 
         private void Start()
@@ -61,39 +103,53 @@ namespace JadedBelles.UI
         /// </summary>
         private void AttachAuthPanel()
         {
-            var uxml = Resources.Load<VisualTreeAsset>("UI/Auth/AuthPanel");
+            // Resolve UXML: Inspector reference first, then Resources fallback.
+            var uxml = _uxmlAsset != null ? _uxmlAsset : Resources.Load<VisualTreeAsset>("UI/Auth/AuthPanel");
             if (uxml == null)
             {
                 var raw = Resources.Load("UI/Auth/AuthPanel");
                 if (raw != null)
-                    Debug.LogError($"[MainMenuAuthGate] Resources/UI/Auth/AuthPanel exists but was imported as {raw.GetType().FullName}, not VisualTreeAsset. Reimport the .uxml in Unity.");
+                    Debug.LogError($"[MainMenuAuthGate] Resources/UI/Auth/AuthPanel exists but was imported as {raw.GetType().FullName}, not VisualTreeAsset. Drag the .uxml onto the Inspector or reimport it.");
                 else
-                    Debug.LogError("[MainMenuAuthGate] Resources/UI/Auth/AuthPanel not found. Expected Assets/Resources/UI/Auth/AuthPanel.uxml.");
+                    Debug.LogError("[MainMenuAuthGate] No UXML assigned in Inspector and Resources/UI/Auth/AuthPanel not found.");
                 return;
             }
 
-            // Build inactive so the components' OnEnable doesn't run mid-configuration.
-            gameObject.SetActive(false);
+            // Reuse an existing UIDocument on this GameObject if present (scene-placed gate);
+            // otherwise add one for the pure-runtime path.
+            var doc = GetComponent<UIDocument>();
+            bool addedDoc = false;
+            if (doc == null)
+            {
+                gameObject.SetActive(false);
+                doc = gameObject.AddComponent<UIDocument>();
+                addedDoc = true;
+            }
 
-            var doc = gameObject.AddComponent<UIDocument>();
+            // PanelSettings: Inspector first, otherwise build one in memory.
+            var panelSettings = _panelSettings;
+            if (panelSettings == null && doc.panelSettings == null)
+            {
+                panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+                panelSettings.name = "AuthPanel_RuntimePanelSettings";
+                panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+                panelSettings.referenceResolution = new Vector2Int(1080, 1920);
+                panelSettings.match = 0.5f;
+            }
+            if (panelSettings != null) doc.panelSettings = panelSettings;
 
-            // In-memory PanelSettings so no asset authoring is needed. Fine for a modal overlay.
-            var panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
-            panelSettings.name = "AuthPanel_RuntimePanelSettings";
-            panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-            panelSettings.referenceResolution = new Vector2Int(1080, 1920);
-            panelSettings.match = 0.5f;
-
-            doc.panelSettings = panelSettings;
-            doc.visualTreeAsset = uxml;
+            if (doc.visualTreeAsset == null) doc.visualTreeAsset = uxml;
             doc.sortingOrder = 100; // Render above the rest of the MainMenu.
 
-            _panel = gameObject.AddComponent<AuthPanelController>();
+            _panel = GetComponent<AuthPanelController>();
+            if (_panel == null) _panel = gameObject.AddComponent<AuthPanelController>();
+
+            _panel.SetAssets(_uxmlAsset != null ? _uxmlAsset : uxml, _ussAsset);
             _panel.OnLoggedIn.AddListener(HandleLoggedIn);
             _panel.OnGuestChosen.AddListener(HandleGuestChosen);
             _panel.OnLoggedOut.AddListener(HandleLoggedOut);
 
-            gameObject.SetActive(true);
+            if (addedDoc) gameObject.SetActive(true);
         }
 
         private void HandleLoggedIn()
