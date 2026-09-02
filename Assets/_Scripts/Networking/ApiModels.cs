@@ -92,6 +92,11 @@ namespace JadedBelles.Networking
         public int schemaVersion;
         public int revision;
         public string updatedAt;
+        // Opaque JSON blob produced by PlayerDataManager. The payload's shape is defined by
+        // the PlayerData type in PlayerHandler.cs and is versioned by schemaVersion above.
+        // Adding fields to PlayerData is additive: old clients simply ignore unknown keys.
+        // Meta-system fields (stars, winStreak, decorateProgress, *Boosters) live inside
+        // this blob; the wire type does not need per-field members.
         public string saveData;
     }
 

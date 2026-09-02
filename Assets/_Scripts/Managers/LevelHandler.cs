@@ -14,6 +14,16 @@ public class LevelHandler : MonoBehaviour
 {
     public const string BundledLevelsResource = "Levels/levels";
 
+    // ---- Bonus level configuration ----
+    // Bonus levels are marked in levels.json by "type": "bonus" on the LevelData.
+    // The board treats them as no-fail with a fixed 60s timer; each cleared gem is worth
+    // +1 coin. Match3 reads BonusTimeSeconds via PlayerPrefs signaling (see PublishBonusSignal)
+    // so no GameEvents change is required — the PlayerPrefs key is the cross-agent contract
+    // documented in the Meta PR body.
+    public const float BonusTimeSeconds = 60f;
+    public const string CurrentLevelIsBonusPrefKey = "CurrentLevelIsBonus";
+    public const string CurrentLevelBonusTimePrefKey = "CurrentLevelBonusTime";
+
     public static LevelHandler instance { get; private set; }
 
     /// <summary>True once the catalog has been parsed and hydrated.</summary>
@@ -23,6 +33,10 @@ public class LevelHandler : MonoBehaviour
     public event Action OnLevelsReady;
 
     private readonly List<Level> levels = new List<Level>();
+    // Set of level.id values whose LevelData.type == "bonus". Populated during hydration.
+    // Level (owned by another agent) can't carry the field itself, so LevelHandler is the
+    // one place that knows which levels are bonus. Match3/UI read via IsBonusLevel(index).
+    private readonly HashSet<int> bonusLevelIds = new HashSet<int>();
     private GemTypeRegistry registry;
 
     private void Awake()
@@ -92,15 +106,19 @@ public class LevelHandler : MonoBehaviour
         }
 
         levels.Clear();
+        bonusLevelIds.Clear();
+        levelIdsByIndex.Clear();
         collection.levels.Sort((a, b) => a.id.CompareTo(b.id));
         foreach (var data in collection.levels)
         {
             var level = ScriptableObject.CreateInstance<Level>();
             level.Hydrate(data, registry);
             levels.Add(level);
+            levelIdsByIndex.Add(data.id);
+            if (data.IsBonus) bonusLevelIds.Add(data.id);
         }
 
-        Debug.Log($"Loaded {levels.Count} levels from the {sourceLabel} catalog (version {collection.version}).");
+        Debug.Log($"Loaded {levels.Count} levels from the {sourceLabel} catalog (version {collection.version}). Bonus levels: {bonusLevelIds.Count}.");
         return true;
     }
 
@@ -111,4 +129,56 @@ public class LevelHandler : MonoBehaviour
 
     /// <summary>Number of levels in the catalog, without copying the list.</summary>
     public int LevelCount => levels.Count;
+
+    // ---- Bonus level API ----
+
+    /// <summary>True if the level at the given catalog index is flagged "bonus".</summary>
+    public bool IsBonusLevelAtIndex(int levelIndex)
+    {
+        if (levelIndex < 0 || levelIndex >= levels.Count) return false;
+        return IsBonusLevel(levels[levelIndex]);
+    }
+
+    /// <summary>True if the given hydrated Level is a bonus level.</summary>
+    public bool IsBonusLevel(Level level)
+    {
+        if (level == null) return false;
+        // Level's public API doesn't expose its source id; match by name against the
+        // catalog we hydrated. Names collide only if the JSON is authored badly, in
+        // which case both entries would be bonus/normal together — acceptable.
+        for (int i = 0; i < levels.Count; i++)
+        {
+            if (levels[i] == level)
+            {
+                // Correlate index -> id via the parsed collection; we didn't retain LevelData
+                // per level, but the ids in bonusLevelIds match catalog order. Rebuild by
+                // walking the same sort — cheap because we only do this on level start.
+                // Fallback path (id unknown here): assume not bonus.
+                return bonusLevelIds.Contains(TryGetLevelIdAtIndex(i));
+            }
+        }
+        return false;
+    }
+
+    // We drop the raw LevelData after hydration, so we reconstruct a stable id per index
+    // during hydration and stash it on a parallel list. Keeps Level's public surface untouched.
+    private readonly List<int> levelIdsByIndex = new List<int>();
+
+    private int TryGetLevelIdAtIndex(int idx)
+    {
+        return (idx >= 0 && idx < levelIdsByIndex.Count) ? levelIdsByIndex[idx] : -1;
+    }
+
+    /// <summary>
+    /// Publishes the current-level bonus signal via PlayerPrefs so Match3 (which A owns) can
+    /// pick it up without a new event bus channel. Call before loading the game scene.
+    /// </summary>
+    public void PublishBonusSignal(int levelIndex)
+    {
+        bool isBonus = IsBonusLevelAtIndex(levelIndex);
+        PlayerPrefs.SetInt(CurrentLevelIsBonusPrefKey, isBonus ? 1 : 0);
+        PlayerPrefs.SetFloat(CurrentLevelBonusTimePrefKey, BonusTimeSeconds);
+        PlayerPrefs.Save();
+        Debug.Log($"Bonus signal for level index {levelIndex}: {(isBonus ? "BONUS" : "normal")}");
+    }
 }
