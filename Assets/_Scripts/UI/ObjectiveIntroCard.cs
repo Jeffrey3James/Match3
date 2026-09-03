@@ -98,7 +98,8 @@ public class ObjectiveIntroCard : MonoBehaviour
         var seen = new HashSet<ObjectiveConfig>();
         foreach (var cfg in objectives)
         {
-            if (cfg == null || cfg.typesToClear == null) continue;
+            // ObjectiveConfig is a struct, so cfg itself can never be null; only the referenced sprite can.
+            if (cfg.typesToClear == null) continue;
             if (!seen.Add(cfg)) continue;
 
             var iconGO = Instantiate(iconPrefab.gameObject, iconContainer);
