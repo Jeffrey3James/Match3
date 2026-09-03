@@ -52,6 +52,12 @@ namespace Match3Game.Juice {
             MatchJuiceRuntime.EnsureExists().DoCoinFlyCue();
         }
 
+        /// <summary>Star flight cue. Fire when a star sprite begins its arc into the HUD.
+        /// Currently plays the coin clip pitched up so stars read as "brighter".</summary>
+        public static void StarFlyCue() {
+            MatchJuiceRuntime.EnsureExists().DoStarFlyCue();
+        }
+
         /// <summary>Chime played the moment a power-up gem is first created by a match.</summary>
         public static void PowerUpChime() {
             MatchJuiceRuntime.EnsureExists().DoPowerUpChime();

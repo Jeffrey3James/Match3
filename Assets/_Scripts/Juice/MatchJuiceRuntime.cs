@@ -136,6 +136,15 @@ namespace Match3Game.Juice {
             PlayOneShotPitched(coinFlyClip, 1f);
         }
 
+        internal void DoStarFlyCue() {
+            if (coinFlyClip == null) {
+                WarnOnce(ref _warnedNoCoinClip, "MatchJuiceRuntime.coinFlyClip is null; StarFlyCue is a no-op.");
+                return;
+            }
+            // Same clip as coins, pitched up ~a fifth so stars read as "brighter".
+            PlayOneShotPitched(coinFlyClip, 1.5f);
+        }
+
         internal void DoPowerUpChime() {
             if (powerUpChimeClip == null) {
                 WarnOnce(ref _warnedNoPowerUpClip, "MatchJuiceRuntime.powerUpChimeClip is null; PowerUpChime is a no-op.");
