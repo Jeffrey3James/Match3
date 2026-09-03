@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using Match3Game.Juice;
 
 /// <summary>
 /// One-shot arcing coin/star burst from a board position toward a HUD target.

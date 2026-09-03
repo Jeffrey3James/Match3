@@ -2,6 +2,7 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Match3Game.Juice;
 
 /// <summary>
 /// Xandria + Armadillo portrait in the bottom-left of the main menu with a
