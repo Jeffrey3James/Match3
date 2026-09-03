@@ -2,6 +2,7 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Match3Game.Juice;
 
 /// <summary>
 /// Drop-in counter for HUD chips (coins, lives, stars). SetValue snaps.
