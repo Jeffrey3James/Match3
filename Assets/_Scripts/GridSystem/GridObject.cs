@@ -1,58 +1,39 @@
-﻿namespace Match3Game {
+using JadedBelles.Util.GridSystem;
 
-    //for using a single type in the grid system
-    public class GridObject<T> {
-        GridSystem2D<GridObject<T>> grid;
-        int x;
-        int y;
-        T gem;
-        
-        public GridObject(GridSystem2D<GridObject<T>> grid, int x, int y) {
-            this.grid = grid;
-            this.x = x;
-            this.y = y;
-        }
+namespace Match3Game
+{
+    /// <summary>
+    /// Compatibility shim over <see cref="GridCell{TValue, TShape}"/> from
+    /// <c>com.jadedbelles.util</c>. Preserves the legacy <c>SetGem</c>/<c>GetGem</c>/
+    /// <c>SetLevelShaper</c>/<c>GetLevelShaper</c> method names so existing Match3 call sites
+    /// keep compiling without changes.
+    ///
+    /// Migration path (future PR): rename SetGem→SetValue, GetGem→GetValue,
+    /// SetLevelShaper→SetShape, GetLevelShaper→GetShape, then delete this shim.
+    /// </summary>
+    [System.Serializable]
+    public class GridObj : GridCell<Gem, LevelShaperComponent>
+    {
+        // We accept the original GridSystem2D<GridObj> signature but pass null to the base
+        // since neither the pre-shim GridObj nor the packaged GridCell surfaces this
+        // reference through any code path Match3 exercises. If a caller ever needs
+        // GetGrid() to return non-null, expose a covariant getter here.
+        public GridObj(GridSystem2D<GridObj> grid, int x, int y) : base(null, x, y) { }
 
-        public void SetValue(T gem) {
-            this.gem = gem;
-        }
-        
-        public T GetValue() => gem;
-        public int GetX() => x;
-        public int GetY() => y;
+        public void SetGem(Gem gem) => SetValue(gem);
+        public Gem GetGem() => GetValue();
+
+        public void SetLevelShaper(LevelShaperComponent levelShaper) => SetShape(levelShaper);
+        public LevelShaperComponent GetLevelShaper() => GetShape();
     }
 
-    [System.Serializable]
-    //For using multiple different types in the grid system
-    public class GridObj
+    /// <summary>
+    /// Legacy single-value cell wrapper — retained for parity with older Match3 code.
+    /// Callers should prefer <see cref="GridCell{TValue, TShape}"/> or the packaged
+    /// <see cref="JadedBelles.Util.GridSystem.GridObject{T}"/> directly.
+    /// </summary>
+    public class GridObject<T> : JadedBelles.Util.GridSystem.GridObject<T>
     {
-        private GridSystem2D<GridObj> grid;
-        private int x;
-        private int y;
-
-        private Gem gem;
-        private LevelShaperComponent levelShaper;
-
-        public GridObj(GridSystem2D<GridObj> grid, int x, int y)
-        {
-            this.grid = grid;
-            this.x = x;
-            this.y = y;
-        }
-
-        public void SetGem(Gem gem) => this.gem = gem;
-        public Gem GetGem() => gem;
-
-        public void SetXY(int x, int y)
-        {
-            this.x = x;
-            this.y = y;
-        }
-
-        public void SetLevelShaper(LevelShaperComponent levelShaper) => this.levelShaper = levelShaper;
-        public LevelShaperComponent GetLevelShaper() => levelShaper;
-
-        public int GetX() => x;
-        public int GetY() => y;
+        public GridObject(GridSystem2D<GridObject<T>> grid, int x, int y) : base(null, x, y) { }
     }
 }
