@@ -125,8 +125,11 @@ public class ObjectiveIntroCard : MonoBehaviour
         {
             cardRoot.DOKill();
             cardRoot.localScale = Vector3.zero;
-            cardRoot.DOScale(1f, punchInDuration).SetEase(Ease.OutBack).SetUpdate(true);
-        }
+            cardRoot.DOScale(1f, punchInDuration)
+              .SetEase(Ease.OutBack)
+              .SetUpdate(true)
+              .SetLink(cardRoot.gameObject);
+      }
         if (cardGroup != null)
         {
             cardGroup.alpha = 1f;

@@ -104,6 +104,7 @@ namespace Match3Game
 
         private void Awake()
         {
+      Application.SetStackTraceLogType(LogType.Exception, StackTraceLogType.ScriptOnly);
       Debug.Log($"[Match3] Board instances alive: {FindObjectsByType<Match3>(FindObjectsSortMode.None).Length}, scene={gameObject.scene.name}");
       Instance = this;
       inputReader = GetComponent<InputReader>();
@@ -362,7 +363,7 @@ namespace Match3Game
                     Destroy(gem.gameObject, ScaledPop);
                 }
             }
-            PlayerHandler.instance.AddCoins(scoreForThisLevel);
+            PlayerHandler.instance.AddCoins(scoreForThisLevel);         
 
         }
 

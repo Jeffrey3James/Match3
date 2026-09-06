@@ -29,16 +29,16 @@ namespace Match3Game
             this.grid = grid;
         }
 
-        public void Select()
-        {
-            isSelected = true;
+    public void Select() {
+      isSelected = true;
 
-            //Stop existing tweening
-            pulseTween?.Kill();
+      //Stop existing tweening
+      pulseTween?.Kill();
 
-            pulseTween = transform.DOScale(.85f, .3f)
-                .SetLoops(-1, LoopType.Yoyo)
-                .SetEase(Ease.InOutSine);
+      pulseTween = transform.DOScale(.85f, .3f)
+          .SetLoops(-1, LoopType.Yoyo)
+          .SetEase(Ease.InOutSine)
+          .SetLink(gameObject);
         }
 
         public void Deselect()
@@ -95,7 +95,10 @@ namespace Match3Game
             return gridObj.GetGem().GetGemType();
         }
 
-
+    void OnDestroy() {
+      pulseTween?.Kill();
+      pulseTween = null;
+      }
 
     #region Event Channel Setup
     public virtual void CreateEvent()

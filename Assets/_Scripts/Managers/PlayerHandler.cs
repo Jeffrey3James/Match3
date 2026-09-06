@@ -41,14 +41,16 @@ public class PlayerHandler : MonoBehaviour
         else
         {
             Destroy(gameObject);
-        }
-
-        SceneManager.sceneLoaded += OnSceneLoaded;
-        GameEventsManager.instance.gameEvents.onLevelCompleted += OnLevelCompleted;
-        GameEventsManager.instance.gameEvents.onLevelFailed += OnLevelFailed;
+        }        
     }
 
-    private void OnLevelCompleted()
+  private void Start() {
+    SceneManager.sceneLoaded += OnSceneLoaded;
+    GameEventsManager.instance.gameEvents.onLevelCompleted += OnLevelCompleted;
+    GameEventsManager.instance.gameEvents.onLevelFailed += OnLevelFailed;
+    }
+
+  private void OnLevelCompleted()
     {
         playerData.playerLevel++;
 

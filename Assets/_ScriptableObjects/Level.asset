@@ -15,7 +15,7 @@ MonoBehaviour:
   levelName: Fallback
   maxMoves: 99
   width: 9
-  height: 12
+  height: 13
   levelShaperPrefab: {fileID: 0}
   excludedCells: []
   gemClearObjectives: []

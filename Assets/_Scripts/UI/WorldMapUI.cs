@@ -138,11 +138,12 @@ public class WorldMapUI : MonoBehaviour
         {
             node.DOKill();
             node.localScale = Vector3.one;
-            node.DOScale(1.12f, 0.6f)
-                .SetEase(Ease.InOutSine)
-                .SetLoops(-1, LoopType.Yoyo)
-                .SetUpdate(true);
-        }
+      node.DOScale(1.12f, 0.6f)
+.SetEase(Ease.InOutSine)
+.SetLoops(-1, LoopType.Yoyo)
+.SetUpdate(true)
+.SetLink(node.gameObject);
+      }
     }
 
     private void WireNode(RectTransform node, int index, NodeState state)
