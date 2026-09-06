@@ -35,6 +35,9 @@ public class LoginPanel : MonoBehaviour
     [SerializeField] private Button signUpButton;
     [Tooltip("Optional. Skips auth entirely and closes the panel.")]
     [SerializeField] private Button guestButton;
+    [Tooltip("Optional. When present, kicks off the self-serve password-reset flow against the " +
+             "email in the Username field. Required for store submissions (App Store / Google Play).")]
+    [SerializeField] private Button forgotPasswordButton;
 
     [Header("Optional")]
     [Tooltip("Optional. Shows errors and progress messages.")]
@@ -64,6 +67,7 @@ public class LoginPanel : MonoBehaviour
         if (loginButton != null) loginButton.onClick.AddListener(OnLoginClicked);
         if (signUpButton != null) signUpButton.onClick.AddListener(OnSignUpClicked);
         if (guestButton != null) guestButton.onClick.AddListener(OnGuestClicked);
+        if (forgotPasswordButton != null) forgotPasswordButton.onClick.AddListener(OnForgotPasswordClicked);
 
         // Pressing Enter in the password field submits a login.
         if (passwordField != null)
@@ -75,6 +79,7 @@ public class LoginPanel : MonoBehaviour
         if (loginButton != null) loginButton.onClick.RemoveListener(OnLoginClicked);
         if (signUpButton != null) signUpButton.onClick.RemoveListener(OnSignUpClicked);
         if (guestButton != null) guestButton.onClick.RemoveListener(OnGuestClicked);
+        if (forgotPasswordButton != null) forgotPasswordButton.onClick.RemoveListener(OnForgotPasswordClicked);
     }
 
     private void Start()
@@ -168,6 +173,53 @@ public class LoginPanel : MonoBehaviour
                 SetBusy(false, null);
                 SetStatus(string.IsNullOrEmpty(error) ? "Sign up failed." : error, isError: true);
                 Debug.LogWarning("[LoginPanel] Register failed: " + error);
+            });
+    }
+
+    /// <summary>
+    /// Fires the self-serve password-reset flow using whatever is
+    /// currently typed in the Username / email field. The server always
+    /// returns the same "if that email exists, we've sent a link"
+    /// message — the panel just surfaces that verbatim so the user
+    /// isn't told which addresses are or aren't registered. The user
+    /// finishes the reset by clicking the emailed link on the website
+    /// (there is no in-app confirm step).
+    /// </summary>
+    private void OnForgotPasswordClicked()
+    {
+        if (_busy) return;
+
+        string email = (usernameField != null ? usernameField.text : "").Trim();
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            SetStatus("Enter your account email above, then tap Forgot Password.", isError: true);
+            return;
+        }
+
+        if (!email.Contains("@") || !email.Contains("."))
+        {
+            SetStatus("Enter a valid email address to reset your password.", isError: true);
+            return;
+        }
+
+        SetBusy(true, "Sending reset email...");
+
+        JadedBellesApiClient.Instance.RequestPasswordReset(
+            email,
+            onSuccess: response =>
+            {
+                SetBusy(false, null);
+                string msg = response != null && !string.IsNullOrEmpty(response.message)
+                    ? response.message
+                    : "If an account exists for that email, we've sent a reset link. Check your inbox.";
+                SetStatus(msg);
+            },
+            onError: error =>
+            {
+                SetBusy(false, null);
+                SetStatus(string.IsNullOrEmpty(error) ? "Could not send reset email." : error, isError: true);
+                Debug.LogWarning("[LoginPanel] Password-reset request failed: " + error);
             });
     }
 
@@ -276,6 +328,7 @@ public class LoginPanel : MonoBehaviour
         if (loginButton != null) loginButton.interactable = !busy;
         if (signUpButton != null) signUpButton.interactable = !busy;
         if (guestButton != null) guestButton.interactable = !busy;
+        if (forgotPasswordButton != null) forgotPasswordButton.interactable = !busy;
         if (usernameField != null) usernameField.interactable = !busy;
         if (passwordField != null) passwordField.interactable = !busy;
 
