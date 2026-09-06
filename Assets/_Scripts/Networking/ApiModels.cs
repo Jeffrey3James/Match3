@@ -36,6 +36,18 @@ namespace JadedBelles.Networking
         public string email;
     }
 
+    /// <summary>
+    /// Body for POST /api/v1/auth/password-reset/request. Same shape as
+    /// the account-deletion request — same email round-trip pattern. The
+    /// game only initiates the reset; the user completes it from the
+    /// emailed link on the website (there is no in-app confirm step).
+    /// </summary>
+    [Serializable]
+    public class PasswordResetRequestBody
+    {
+        public string email;
+    }
+
     /// <summary>Generic save request without optimistic-concurrency metadata.</summary>
     [Serializable]
     public class PutGameSaveRequest

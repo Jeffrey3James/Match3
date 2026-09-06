@@ -129,6 +129,29 @@ namespace JadedBelles.Networking
                 onError));
         }
 
+        /// <summary>
+        /// Kicks off the self-serve password-reset flow for a supplied
+        /// email. Same generic "if that email exists, we've sent a link"
+        /// response contract as account deletion — the client treats
+        /// every non-error response as success and tells the user to
+        /// check their inbox. The user finishes the reset by clicking
+        /// the emailed link on the website (there is no in-app confirm
+        /// step). Unauthenticated on purpose so it works when the user
+        /// has forgotten their password and has no active session.
+        /// </summary>
+        public void RequestPasswordReset(string email, Action<ApiResponsePlain> onSuccess, Action<string> onError)
+        {
+            PasswordResetRequestBody body = new PasswordResetRequestBody { email = email };
+            StartCoroutine(SendRequest<ApiResponsePlain>(
+                UnityWebRequest.kHttpVerbPOST,
+                "/api/v1/auth/password-reset/request",
+                JsonUtility.ToJson(body),
+                false,
+                false,
+                onSuccess,
+                onError));
+        }
+
         public void Logout(Action<ApiResponsePlain> onSuccess, Action<string> onError)
         {
             StartCoroutine(SendRequest<ApiResponsePlain>(
