@@ -4,6 +4,7 @@ using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 using Match3Game;
+using UnityEngine.Rendering.Universal;
 
 /// <summary>
 /// Full-screen intro card that reads the current level's objectives and shows them

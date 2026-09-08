@@ -337,37 +337,38 @@ namespace Match3Game
             StartCoroutine(PostSettleTasks());
         }
 
-        private IEnumerator ExplodeGems(List<Vector2Int> matches)
-        {
-            GameEventsManager.instance.gameEvents.MatchMade();
-            AudioManager.instance.PlayPop();
-            foreach (var match in matches)
-            {
-                if (IsValidPosition(match))
-                {
-                    var gem = grid2.GetValue(match.x, match.y).GetGem();
-                    grid2.SetValue(match.x, match.y, null);
-                    ExplodeVFX(match);
-                    gem.transform.DOPunchScale(Vector3.one * 0.1f, ScaledPop, 1, 0.5f);
-                    if (isGameOver)
-                    {
-                        scoreForThisLevel += gemValue;
-                        Debug.Log(scoreForThisLevel);
-                        movesLeft--;
-                        UpdateMovesText();
-                        GameEventsManager.instance.gameEvents.ScoreChanged(scoreForThisLevel);
-                        
-                    }
-                    gem.GetChannel().Invoke(-1); // Notify the gem's channel that it has been destroyed
-                    yield return new WaitForSeconds(ScaledPop);
-                    Destroy(gem.gameObject, ScaledPop);
-                }
+    private IEnumerator ExplodeGems(List<Vector2Int> matches) {
+      GameEventsManager.instance.gameEvents.MatchMade();
+      AudioManager.instance.PlayPop();
+      foreach (var match in matches) {
+        if (IsValidPosition(match)) {
+          var gem = grid2.GetValue(match.x, match.y).GetGem();
+          grid2.SetValue(match.x, match.y, null);
+          ExplodeVFX(match);
+
+          // SetLink kills the tween automatically if the gem GameObject is
+          // destroyed before the tween finishes — no more MissingReferenceException
+          // from DOTween trying to write .localScale on a dead RectTransform.
+          gem.transform
+              .DOPunchScale(Vector3.one * 0.1f, ScaledPop, 1, 0.5f)
+              .SetLink(gem.gameObject);
+
+          if (isGameOver) {
+            scoreForThisLevel += gemValue;
+            Debug.Log(scoreForThisLevel);
+            movesLeft--;
+            UpdateMovesText();
+            GameEventsManager.instance.gameEvents.ScoreChanged(scoreForThisLevel);
             }
-            PlayerHandler.instance.AddCoins(scoreForThisLevel);         
-
+          gem.GetChannel().Invoke(-1); // Notify the gem's channel that it has been destroyed
+          yield return new WaitForSeconds(ScaledPop);
+          Destroy(gem.gameObject);
+          }
         }
+      PlayerHandler.instance.AddCoins(scoreForThisLevel);
+      }
 
-        private IEnumerator CheckAllAdjacentObstacles(HashSet<Vector2Int> allMatches)
+    private IEnumerator CheckAllAdjacentObstacles(HashSet<Vector2Int> allMatches)
         {
 
 
@@ -411,45 +412,45 @@ namespace Match3Game
             yield return new WaitForSeconds(ScaledCascade); // Small delay to allow animations or effects to play out
         }
 
-        private IEnumerator MakeGemsFall()
-        {
-            for (var x = 0; x < width; x++)
-            {
-                for (var y = 0; y < height; y++)
-                {
-                    if (grid2.GetValue(x, y) == null)
-                    {
-                        for (var i = y + 1; i < height; i++)
-                        {
-                            var fallingGridObj = grid2.GetValue(x, i);
-                            if (fallingGridObj != null)
-                            {
-                                var gem = fallingGridObj.GetGem();
-                                if (gem != null)
-                                {                               
-                                    fallingGridObj.SetXY(x, y);
+    private IEnumerator MakeGemsFall() {
+      for (var x = 0; x < width; x++) {
+        for (var y = 0; y < height; y++) {
+          if (grid2.GetValue(x, y) == null) {
+            for (var i = y + 1; i < height; i++) {
+              var fallingGridObj = grid2.GetValue(x, i);
+              if (fallingGridObj != null) {
+                var gem = fallingGridObj.GetGem();
+                if (gem != null) {
+                  fallingGridObj.SetXY(x, y);
 
-                                    grid2.SetValue(x, y, fallingGridObj);
-                                    grid2.SetValue(x, i, null);
+                  grid2.SetValue(x, y, fallingGridObj);
+                  grid2.SetValue(x, i, null);
 
-                                   gem.SetXY(x, y, grid2);
+                  gem.SetXY(x, y, grid2);
 
-                                    gem.transform
-                                        .DOLocalMove(grid2.GetWorldPositionCenter(x, y), ScaledFall)
-                                        .SetEase(ease)
-                                        .WaitForCompletion();
+                  // Fire the fall tween and actually wait for it.
+                  // .WaitForCompletion() alone is a blocking call that
+                  // returns void and was silently ignored — that's why
+                  // gems appeared to teleport / stack.
+                  var moveTween = gem.transform
+     .DOMove(grid2.GetWorldPositionCenter(x, y), ScaledFall)   // was DOLocalMove
+     .SetEase(ease)
+     .SetLink(gem.gameObject);
 
-                                    yield return new WaitForSeconds(ScaledCascade);
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                  while (moveTween != null && moveTween.IsActive() && !moveTween.IsComplete())
+                    yield return null;
+
+                  yield return new WaitForSeconds(ScaledCascade);
+                  break;
+                  }
                 }
+              }
             }
+          }
         }
+      }
 
-        private IEnumerator FillEmptySpots()
+    private IEnumerator FillEmptySpots()
         {
             for (var x = 0; x < width; x++)
             {
@@ -649,27 +650,30 @@ namespace Match3Game
             gemA.GetGem().SetXY(gridPosB.x, gridPosB.y, grid2);
             gemB.GetGem().SetXY(gridPosA.x, gridPosA.y, grid2);
 
-            gemA.GetGem().Deselect();
-            gemB.GetGem().Deselect();
+      gemA.GetGem().Deselect();
+      gemB.GetGem().Deselect();
 
-            // Animate the visual movement — duration comes from SWAP_DURATION
-            // (item 3 in the gap doc) so all swaps stay in the 0.15s target.
-            gemA.GetGem().transform
-                .DOLocalMove(grid2.GetWorldPositionCenter(gridPosB.x, gridPosB.y), ScaledSwap)
-                .SetEase(ease)
-                .WaitForCompletion();
-            gemB.GetGem().transform
-                .DOLocalMove(grid2.GetWorldPositionCenter(gridPosA.x, gridPosA.y), ScaledSwap)
-                .SetEase(ease)
-                .WaitForCompletion();
+      // Animate the visual movement — duration comes from SWAP_DURATION
+      // (item 3 in the gap doc) so all swaps stay in the 0.15s target.
+      var swapA = gemA.GetGem().transform
+    .DOMove(grid2.GetWorldPositionCenter(gridPosB.x, gridPosB.y), ScaledSwap)  // was DOLocalMove
+    .SetEase(ease)
+    .SetLink(gemA.GetGem().gameObject);
 
-            // Update grid references
-            grid2.SetValue(gridPosA.x, gridPosA.y, gemB);
-            grid2.SetValue(gridPosB.x, gridPosB.y, gemA);
+      var swapB = gemB.GetGem().transform
+          .DOMove(grid2.GetWorldPositionCenter(gridPosA.x, gridPosA.y), ScaledSwap)  // was DOLocalMove
+          .SetEase(ease)
+          .SetLink(gemB.GetGem().gameObject);
 
+      // Update grid references
+      grid2.SetValue(gridPosA.x, gridPosA.y, gemB);
+      grid2.SetValue(gridPosB.x, gridPosB.y, gemA);
 
-            yield return new WaitForSeconds(ScaledSwap);
-        }
+      // Wait until both tweens have actually finished before returning control.
+      while ((swapA != null && swapA.IsActive() && !swapA.IsComplete()) ||
+             (swapB != null && swapB.IsActive() && !swapB.IsComplete()))
+        yield return null;
+      }
 
         private void OnSelectGem()
         {
@@ -1447,7 +1451,8 @@ namespace Match3Game
             foreach (var g in normalGems)
             {
                 var sr = g.GetComponent<SpriteRenderer>();
-                if (sr != null) sr.DOFade(0f, ScaledFade);
+                if (sr != null) sr.DOFade(0f, ScaledFade).SetLink
+            (gameObject);
             }
             yield return new WaitForSeconds(ScaledFade);
 
@@ -1475,7 +1480,7 @@ namespace Match3Game
             foreach (var g in normalGems)
             {
                 var sr = g.GetComponent<SpriteRenderer>();
-                if (sr != null) sr.DOFade(1f, ScaledFade);
+                if (sr != null) sr.DOFade(1f, ScaledFade).SetLink(gameObject);
             }
             yield return new WaitForSeconds(ScaledFade);
 
