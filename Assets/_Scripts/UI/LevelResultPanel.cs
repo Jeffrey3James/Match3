@@ -123,7 +123,27 @@ public class LevelResultPanel : MonoBehaviour {
       Debug.LogWarning("LevelResultPanel: GameEventsManager.instance is null. " +
                         "Win/loss panel will not be triggered by level events.");
       }
+
+    // One-shot self-check: warn on the two configurations that historically made
+    // the panel silently invisible even though Show() ran. If either of these
+    // fires, look here first before assuming an event-wiring bug.
+    if (panelRoot != null && panelRoot.transform is RectTransform rt) {
+      var scale = rt.lossyScale;
+      if (Mathf.Abs(scale.x) < 0.0001f || Mathf.Abs(scale.y) < 0.0001f)
+        Debug.LogError(
+          "[LevelResultPanel] panelRoot has zero effective scale (" + scale + "). " +
+          "An ancestor RectTransform (usually the Canvas) is scaled to 0. " +
+          "Show() will run but nothing will render. Fix the parent scale.",
+          this);
+      }
+    if (mainMenuButton == null)
+      Debug.LogError("[LevelResultPanel] mainMenuButton is not assigned in the Inspector.", this);
     }
+
+#if UNITY_EDITOR
+  [ContextMenu("Debug/Show as Win")] private void _DebugShowWin() => Show(LevelResult.Win);
+  [ContextMenu("Debug/Show as Loss")] private void _DebugShowLoss() => Show(LevelResult.Loss);
+#endif
 
   private void OnDestroy() {
     if (GameEventsManager.instance != null) {

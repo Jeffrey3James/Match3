@@ -399,5 +399,20 @@ public class LoginPanel : MonoBehaviour
         if (passwordField == null) Debug.LogError("[LoginPanel] Password field is not assigned in the Inspector.", this);
         if (loginButton == null) Debug.LogError("[LoginPanel] Log In button is not assigned in the Inspector.", this);
         if (signUpButton == null) Debug.LogError("[LoginPanel] Sign Up button is not assigned in the Inspector.", this);
+
+        // Historically, guests reported "background visible, buttons invisible" when an
+        // ancestor Canvas was scaled to 0 in the scene. The buttons WERE there, they just
+        // rendered at zero size. Catch that once at startup so the error is unmissable.
+        if (panelRoot != null && panelRoot.transform is RectTransform rt)
+        {
+            var scale = rt.lossyScale;
+            if (Mathf.Abs(scale.x) < 0.0001f || Mathf.Abs(scale.y) < 0.0001f)
+                Debug.LogError(
+                    "[LoginPanel] panelRoot has zero effective scale (" + scale + "). " +
+                    "An ancestor RectTransform (usually the Canvas) is scaled to 0. " +
+                    "Buttons will render invisible even though the background may look fine. " +
+                    "Fix the parent scale.",
+                    this);
+        }
     }
 }
