@@ -157,6 +157,7 @@ namespace Match3Game.Juice {
 
         void PlayOneShotPitched(AudioClip clip, float pitch) {
             if (_audio == null || clip == null) return;
+            if (!SettingsPanel.MusicEnabled) return; // player muted audio in Settings
             _audio.pitch = Mathf.Clamp(pitch, 0.1f, 3f);
             _audio.PlayOneShot(clip);
             // No need to reset — PlayOneShot samples pitch at call-time only for the launched voice.

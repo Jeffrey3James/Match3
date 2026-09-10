@@ -180,9 +180,31 @@ public class SettingsPanel : MonoBehaviour
         // Initialize UI from saved value WITHOUT firing the listener.
         toggle.SetIsOnWithoutNotify(GetBool(prefKey));
 
-        UnityEngine.Events.UnityAction<bool> handler = value => SetBool(prefKey, value);
+        UnityEngine.Events.UnityAction<bool> handler = value =>
+        {
+            SetBool(prefKey, value);
+            OnPrefChanged(prefKey);
+        };
         toggle.onValueChanged.AddListener(handler);
         _toggleHooks.Add((toggle, handler));
+    }
+
+    /// <summary>
+    /// Fires any side effects a toggle should have on OS-level state
+    /// (push registration today; more later). Called AFTER the pref is
+    /// persisted, so services that read <see cref="NotificationsEnabled"/>
+    /// see the new value.
+    /// </summary>
+    private void OnPrefChanged(string prefKey)
+    {
+        if (prefKey == NotificationsPrefKey)
+        {
+            // Align the OS's push-registration state with the new toggle value.
+            PushNotificationService.Sync();
+        }
+        // Music / Haptic / Chat / LastSeen are polled on demand by the systems
+        // that read them (AudioManager, MatchJuiceRuntime, HapticService,
+        // ChatService, PresenceService), so no proactive push is needed here.
     }
 
     // ------------------------------------------------------------------
