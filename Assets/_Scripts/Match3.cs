@@ -21,7 +21,7 @@ namespace Match3Game
         // gap-analysis item 3.
         // ------------------------------------------------------------
         public const float SWAP_DURATION       = 0.15f; // per-swap tween cap
-        public const float FALL_DURATION       = 0.18f; // per-cell fall tween cap
+        public const float FALL_DURATION       = 0.30f; // per-cell fall tween cap
         public const float POP_DURATION        = 0.12f; // per-gem pop tween cap
         public const float CASCADE_WAIT        = 0.06f; // wait between resolve steps
         public const float RESHUFFLE_FADE      = 0.20f; // fade in/out on no-moves reshuffle
@@ -257,7 +257,8 @@ namespace Match3Game
 
             var events = GameEventsManager.instance.gameEvents;
             events.onObjectiveProgressionChanged -= UpdateObjectivesToClear;
-            events.onSwapStarted -= onSwapStartedAction;
+      events.onObstacleCleared -= UpdateObstacleToClear;
+      events.onSwapStarted -= onSwapStartedAction;
             events.onGetGemType -= onGetGemTypeFunc;
             events.onLevelCompleted -= onLevelCompletedAction;
 

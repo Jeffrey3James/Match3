@@ -16,12 +16,12 @@ MonoBehaviour:
   gemCategory: 1
   isObstacle: 0
   powerUpValue: 0
-  powerUpFX: {fileID: 0}
-  powerUpAudio: {fileID: 0}
+  powerUpFX: {fileID: 2955623459812423943, guid: f5507a8c6a22c404ab324980c4e8a11b, type: 3}
+  powerUpAudio: {fileID: 8300000, guid: 4e1ff8faed12a475eba9be0e46072269, type: 3}
   powerUpType: 4
   nukeSprites:
   - gemType: {fileID: 11400000, guid: c3ed56c8dd540504bb0c15a5a2f9d32b, type: 2}
-    sprite: {fileID: 21300000, guid: 0b8f67a58b484ae4d907d5377583529c, type: 3}
+    sprite: {fileID: 21300000, guid: 89c86f0852ba2d7429aaa353ca908a86, type: 3}
   - gemType: {fileID: 11400000, guid: ee19a115642c810458f2c9d37f6dbdaf, type: 2}
     sprite: {fileID: 21300000, guid: 04dee9dd97a1a3d449730d8f1dbc2af9, type: 3}
   - gemType: {fileID: 11400000, guid: 8b1a5a9b552b2734883b99fe385b5935, type: 2}

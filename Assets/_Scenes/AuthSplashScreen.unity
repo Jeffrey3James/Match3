@@ -455,7 +455,7 @@ MonoBehaviour:
   screenRoot: {fileID: 0}
   statusLabel: {fileID: 1657365541}
   minimumDisplaySeconds: 1.25
-  fadeOutSeconds: 0
+  fadeOutSeconds: 3
   persistAcrossScenes: 0
 --- !u!224 &733390968
 RectTransform:
