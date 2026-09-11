@@ -15,12 +15,27 @@ public class ObstacleGem : Gem
     private const int THIRTY_PERCENT = 30;
 
 
+    private bool _subscribed;
+
     public override void Initialize(int x, int y, GridSystem2D<GridObj> grid)
     {
         base.Initialize(x, y, grid);
         // Only if it's an obstacle
         if(GameEventsManager.instance == null) return;
         GameEventsManager.instance.gameEvents.onMatchMade += MadeMatch;
+        _subscribed = true;
+    }
+
+    // GameEventsManager is DontDestroyOnLoad and survives scene loads. Every
+    // ObstacleGem is destroyed as levels tear down, so we MUST unsubscribe here
+    // or the delegate list grows every level and every match fires thousands of
+    // dead handlers on destroyed GameObjects.
+    private void OnDestroy()
+    {
+        if (!_subscribed) return;
+        if (GameEventsManager.instance == null) return;
+        GameEventsManager.instance.gameEvents.onMatchMade -= MadeMatch;
+        _subscribed = false;
     }
 
     private void MadeMatch()
