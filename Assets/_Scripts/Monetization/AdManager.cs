@@ -186,6 +186,7 @@ namespace Match3Game.Monetization
         {
             // Gate #1: master feature flag. Sep 11 playtest ships with this off.
             if (!MonetizationConfig.INTERSTITIALS_ENABLED) return;
+#pragma warning disable CS0162 // unreachable when the compile-time flag above is false; intentional for playtest gating
             // Gate #2: don't stack on top of a rewarded ad.
             if (showInFlight) return;
 
@@ -194,6 +195,7 @@ namespace Match3Game.Monetization
             // is added, dispatch through it here. Deliberately not removed so
             // future call sites keep routing through the same feature gate.
             Debug.Log("[Ads] Interstitial requested; no provider wired.");
+#pragma warning restore CS0162
         }
 
         // playerLevel is a zero-based index; players see level 1 first.

@@ -40,7 +40,8 @@ namespace Match3Game.Juice {
             if (_instance != null) return _instance;
 
             // If someone already dropped one in a scene, take it.
-            var existing = FindObjectOfType<MatchJuiceRuntime>();
+            // Unity 6: FindObjectOfType is obsolete; FindFirstObjectByType is the direct replacement.
+            var existing = FindFirstObjectByType<MatchJuiceRuntime>();
             if (existing != null) {
                 _instance = existing;
                 _instance.Init();
