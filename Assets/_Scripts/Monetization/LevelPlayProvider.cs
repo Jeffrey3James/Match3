@@ -113,6 +113,7 @@ namespace Match3Game.Monetization
                 return;
             }
 
+#pragma warning disable CS0162 // unreachable when the compile-time flag above is false; intentional for playtest gating
             if (!IsRewardedReady())
             {
                 onNoReward?.Invoke("not_ready");
@@ -123,6 +124,7 @@ namespace Match3Game.Monetization
             pendingReward = onReward;
             pendingNoReward = onNoReward;
             rewardedAd.ShowAd();
+#pragma warning restore CS0162
         }
 
         // ── Interstitials (disabled for Sep 11 playtest) ─────────────────────
@@ -133,8 +135,10 @@ namespace Match3Game.Monetization
         internal void ShowInterstitialGated()
         {
             if (!MonetizationConfig.INTERSTITIALS_ENABLED) return;
+#pragma warning disable CS0162 // unreachable when the compile-time flag above is false; intentional for playtest gating
             // TODO: create LevelPlayInterstitialAd, load in OnInitSuccess, show here.
             Debug.Log("[Ads] LevelPlayProvider.ShowInterstitialGated: not implemented");
+#pragma warning restore CS0162
         }
 
         private void FinishNoReward(string reason)

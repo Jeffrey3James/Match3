@@ -169,7 +169,9 @@ public class SessionBootstrap : MonoBehaviour
     // ------------------------------------------------------------------
     private IEnumerator LoadLevelCatalog()
     {
-        LevelHandler handler = FindObjectOfType<LevelHandler>();
+        // Unity 6: FindObjectOfType is obsolete; FindFirstObjectByType is the direct replacement.
+        // Semantics unchanged (returns the first active LevelHandler, null if none).
+        LevelHandler handler = FindFirstObjectByType<LevelHandler>();
         if (handler == null)
         {
             Debug.LogWarning("[SessionBootstrap] No LevelHandler in scene; skipping level step.");
