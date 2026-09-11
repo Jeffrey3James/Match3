@@ -350,13 +350,24 @@ public class LoginPanel : MonoBehaviour
     /// <summary>Shows the panel.</summary>
     public void Show()
     {
-        if (panelRoot != null) panelRoot.SetActive(true);
+        // Reactivate BOTH the outer GameObject that owns this component AND the
+        // inner panelRoot (which usually points at a child container holding the
+        // fields/buttons). Historically Show() only toggled panelRoot, so if the
+        // outer GameObject had been deactivated by an ancestor (e.g. MainMenuUI
+        // toggling menuContentRoot) the inner root would come back active-in-self
+        // but active-in-hierarchy=false — the background rendered but every child
+        // stayed invisible. Symmetric with Hide() below.
+        if (!gameObject.activeSelf) gameObject.SetActive(true);
+        if (panelRoot != null && !panelRoot.activeSelf) panelRoot.SetActive(true);
         SetStatus("");
     }
 
     /// <summary>Hides the panel.</summary>
     public void Hide()
     {
+        // Only toggle panelRoot off — leave the outer GameObject alone so any
+        // component here (this MonoBehaviour, coroutines, event subscriptions)
+        // keeps running and can be shown again cleanly.
         if (panelRoot != null) panelRoot.SetActive(false);
     }
 
