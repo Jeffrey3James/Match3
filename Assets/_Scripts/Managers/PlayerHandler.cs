@@ -31,11 +31,15 @@ public class PlayerHandler : MonoBehaviour
             _ = PlayerDataManager.instance.UpdatePlayerData();
     }
 
+    private bool _isSingletonInstance;
+    private bool _subscribed;
+
     private void Awake()
     {
         if (instance == null)
         {
             instance = this;
+            _isSingletonInstance = true;
             DontDestroyOnLoad(gameObject);
         }
         else
@@ -45,10 +49,30 @@ public class PlayerHandler : MonoBehaviour
     }
 
   private void Start() {
+    // Guard: the duplicate GameObject is scheduled for Destroy in Awake, but its
+    // Start still runs this frame. Don't let the doomed duplicate subscribe.
+    if (!_isSingletonInstance) return;
     SceneManager.sceneLoaded += OnSceneLoaded;
     GameEventsManager.instance.gameEvents.onLevelCompleted += OnLevelCompleted;
     GameEventsManager.instance.gameEvents.onLevelFailed += OnLevelFailed;
+    _subscribed = true;
     }
+
+  // PlayerHandler is DontDestroyOnLoad, but OnDestroy still fires on app quit
+  // and if the singleton is ever replaced. Unsubscribe cleanly so nothing
+  // dangles on the equally-DontDestroyOnLoad GameEventsManager.
+  private void OnDestroy()
+  {
+    if (!_subscribed) return;
+    SceneManager.sceneLoaded -= OnSceneLoaded;
+    if (GameEventsManager.instance != null)
+    {
+      GameEventsManager.instance.gameEvents.onLevelCompleted -= OnLevelCompleted;
+      GameEventsManager.instance.gameEvents.onLevelFailed -= OnLevelFailed;
+    }
+    _subscribed = false;
+    if (_isSingletonInstance && instance == this) instance = null;
+  }
 
   private void OnLevelCompleted()
     {
