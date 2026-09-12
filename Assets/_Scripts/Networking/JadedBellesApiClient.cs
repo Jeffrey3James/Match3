@@ -188,6 +188,56 @@ namespace JadedBelles.Networking
             StartCoroutine(GetRawRoutine("/api/v1/match3/levels", onSuccess, onError));
         }
 
+        /// <summary>Fetch the raw shop catalog JSON (anonymous endpoint, no envelope).</summary>
+        public void GetShopCatalog(Action<string> onSuccess, Action<string> onError)
+        {
+            StartCoroutine(GetRawRoutine("/api/v1/match3/shop", onSuccess, onError));
+        }
+
+        // ---------- Generic IAP + wallet (reusable across JadedBelles products) ----------
+
+        /// <summary>
+        /// Fetch the shop catalog for any JadedBelles product by slug. This is the
+        /// generic form of GetShopCatalog — new games plug in without adding a route.
+        /// Endpoint returns raw JSON in the ShopCatalog shape.
+        /// </summary>
+        public void GetShopCatalog(string slug, Action<string> onSuccess, Action<string> onError)
+        {
+            StartCoroutine(GetRawRoutine("/api/v1/games/" + slug + "/shop", onSuccess, onError));
+        }
+
+        /// <summary>Fetch the player's wallet for one product.</summary>
+        public void GetWallet(string slug, Action<ApiResponseWallet> onSuccess, Action<string> onError)
+        {
+            StartCoroutine(SendRequest<ApiResponseWallet>(
+                UnityWebRequest.kHttpVerbGET,
+                "/api/v1/games/" + slug + "/wallet",
+                null,
+                true,
+                true,
+                onSuccess,
+                onError));
+        }
+
+        /// <summary>
+        /// Post a store receipt for server-side verification. The server re-verifies
+        /// with Apple/Google/Stripe, grants the rewards, and returns the updated wallet.
+        /// clientNonce makes retries idempotent — send the same nonce if you retry after
+        /// a network flake and the server will return the original grant, not a duplicate.
+        /// </summary>
+        public void VerifyPurchase(string slug, PurchaseVerifyRequest body,
+            Action<ApiResponsePurchase> onSuccess, Action<string> onError)
+        {
+            StartCoroutine(SendRequest<ApiResponsePurchase>(
+                UnityWebRequest.kHttpVerbPOST,
+                "/api/v1/games/" + slug + "/purchases/verify",
+                JsonUtility.ToJson(body),
+                true,
+                true,
+                onSuccess,
+                onError));
+        }
+
         // ---------- Generic game saves ----------
 
         public void GetSaves(string slug, Action<ApiResponseGameSaves> onSuccess, Action<string> onError)
