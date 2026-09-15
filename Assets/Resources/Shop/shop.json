@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "bundle_starter",
+      "tab": "bundles",
+      "title": "Starter Pack",
+      "description": "Perfect kickoff — gems, coins, and a booster.",
+      "iconSprite": "decor-treasure-chest",
+      "badge": "NEW PLAYER",
+      "priceLabel": "$1.99",
+      "currency": "usd",
+      "priceValue": 1.99,
+      "sortOrder": 10,
+      "rewards": [
+        { "type": "gems", "boosterId": "", "amount": 100 },
+        { "type": "coins", "boosterId": "", "amount": 500 },
+        { "type": "booster", "boosterId": "Bomb", "amount": 1 }
+      ]
+    },
+    {
+      "id": "bundle_best_value",
+      "tab": "bundles",
+      "title": "Fairy Feast Bundle",
+      "description": "Everything you need for a long play session.",
+      "iconSprite": "decor-treasure-chest",
+      "badge": "BEST VALUE",
+      "priceLabel": "$9.99",
+      "currency": "usd",
+      "priceValue": 9.99,
+      "sortOrder": 20,
+      "rewards": [
+        { "type": "gems", "boosterId": "", "amount": 750 },
+        { "type": "coins", "boosterId": "", "amount": 3000 },
+        { "type": "booster", "boosterId": "Rocket", "amount": 3 },
+        { "type": "booster", "boosterId": "Hammer", "amount": 3 },
+        { "type": "booster", "boosterId": "Rainbow", "amount": 1 }
+      ]
+    },
+    {
+      "id": "bundle_mega",
+      "tab": "bundles",
+      "title": "Xandria's Vault",
+      "description": "The ultimate stash. Live like royalty.",
+      "iconSprite": "decor-treasure-chest",
+      "badge": "MEGA",
+      "priceLabel": "$24.99",
+      "currency": "usd",
+      "priceValue": 24.99,
+      "sortOrder": 30,
+      "rewards": [
+        { "type": "gems", "boosterId": "", "amount": 2500 },
+        { "type": "coins", "boosterId": "", "amount": 10000 },
+        { "type": "booster", "boosterId": "Bomb", "amount": 5 },
+        { "type": "booster", "boosterId": "Rocket", "amount": 5 },
+        { "type": "booster", "boosterId": "Hammer", "amount": 5 },
+        { "type": "booster", "boosterId": "Rainbow", "amount": 3 }
+      ]
+    },
+
+    {
+      "id": "gems_small",
+      "tab": "gems",
+      "title": "Handful of Gems",
+      "description": "",
+      "iconSprite": "icon-gem-purple",
+      "badge": "",
+      "priceLabel": "$0.99",
+      "currency": "usd",
+      "priceValue": 0.99,
+      "sortOrder": 10,
+      "rewards": [
+        { "type": "gems", "boosterId": "", "amount": 60 }
+      ]
+    },
+    {
+      "id": "gems_medium",
+      "tab": "gems",
+      "title": "Pouch of Gems",
+      "description": "",
+      "iconSprite": "icon-gem-purple",
+      "badge": "",
+      "priceLabel": "$4.99",
+      "currency": "usd",
+      "priceValue": 4.99,
+      "sortOrder": 20,
+      "rewards": [
+        { "type": "gems", "boosterId": "", "amount": 350 }
+      ]
+    },
+    {
+      "id": "gems_large",
+      "tab": "gems",
+      "title": "Chest of Gems",
+      "description": "",
+      "iconSprite": "icon-gem-purple",
+      "badge": "POPULAR",
+      "priceLabel": "$14.99",
+      "currency": "usd",
+      "priceValue": 14.99,
+      "sortOrder": 30,
+      "rewards": [
+        { "type": "gems", "boosterId": "", "amount": 1200 }
+      ]
+    },
+    {
+      "id": "gems_mega",
+      "tab": "gems",
+      "title": "Hoard of Gems",
+      "description": "",
+      "iconSprite": "icon-gem-purple",
+      "badge": "+15%",
+      "priceLabel": "$49.99",
+      "currency": "usd",
+      "priceValue": 49.99,
+      "sortOrder": 40,
+      "rewards": [
+        { "type": "gems", "boosterId": "", "amount": 4500 }
+      ]
+    },
+
+    {
+      "id": "booster_bomb",
+      "tab": "boosters",
+      "title": "Bomb x1",
+      "description": "Clears a 3x3 area.",
+      "iconSprite": "icon-powerup-bomb",
+      "badge": "",
+      "priceLabel": "150 gems",
+      "currency": "gems",
+      "priceValue": 150,
+      "sortOrder": 10,
+      "rewards": [
+        { "type": "booster", "boosterId": "Bomb", "amount": 1 }
+      ]
+    },
+    {
+      "id": "booster_rocket",
+      "tab": "boosters",
+      "title": "Rocket x1",
+      "description": "Clears a full row or column.",
+      "iconSprite": "icon-powerup-rocket",
+      "badge": "",
+      "priceLabel": "150 gems",
+      "currency": "gems",
+      "priceValue": 150,
+      "sortOrder": 20,
+      "rewards": [
+        { "type": "booster", "boosterId": "Rocket", "amount": 1 }
+      ]
+    },
+    {
+      "id": "booster_hammer",
+      "tab": "boosters",
+      "title": "Hammer x1",
+      "description": "Smash any single gem.",
+      "iconSprite": "icon-powerup-hammer",
+      "badge": "",
+      "priceLabel": "100 gems",
+      "currency": "gems",
+      "priceValue": 100,
+      "sortOrder": 30,
+      "rewards": [
+        { "type": "booster", "boosterId": "Hammer", "amount": 1 }
+      ]
+    },
+    {
+      "id": "booster_rainbow",
+      "tab": "boosters",
+      "title": "Rainbow Gem x1",
+      "description": "Clears every gem of one color.",
+      "iconSprite": "icon-powerup-rainbow",
+      "badge": "RARE",
+      "priceLabel": "500 gems",
+      "currency": "gems",
+      "priceValue": 500,
+      "sortOrder": 40,
+      "rewards": [
+        { "type": "booster", "boosterId": "Rainbow", "amount": 1 }
+      ]
+    }
+  ]
+}
