@@ -182,34 +182,54 @@ namespace Match3Game
         {           
             List<Vector2Int> spotsToEpmty = new List<Vector2Int>();
 
+            // Safety valve: an empty/blocked board (all excluded cells, or a
+            // level with fewer free cells than movesLeft) would otherwise spin
+            // this loop forever trying to find valid, unvisited positions.
+            int maxAttempts = Mathf.Max(1, width * height * 4);
+            int attempts = 0;
+
             //Create new powerups to activate based on the amount of moves left in the level after completion
-            while (spotsToEpmty.Count < movesLeft)
+            while (spotsToEpmty.Count < movesLeft && attempts < maxAttempts)
             {
+                attempts++;
+
                 int randomX = Random.Range(0, width);
                 int randomY = Random.Range(0, height);
                 Vector2Int position = new Vector2Int(randomX, randomY);
 
-                Debug.Log(position);
                 if (spotsToEpmty.Contains(position))
                 {
-                    Debug.LogWarning("Already contains these coordinates skipping !!"); continue;
+                    continue;
                 }
 
                 if (!IsValidPosition(position))
                 {
-                    Debug.LogWarning("InvalidPosition Get another one  !!"); continue;
+                    continue;
+                }
+
+                // BUGFIX: IsValidPosition only checks bounds/excluded cells, not
+                // whether the cell actually holds a gem right now. By the time
+                // the level completes, cascades/clears may have left some cells
+                // temporarily empty (grid2.GetValue returns null), and calling
+                // .GetGem() on that null GridObj threw a NullReferenceException
+                // that killed this coroutine before ScoreFinalized/PlayerDataSaved
+                // ever ran. Skip empty cells instead of crashing.
+                var gridObject = grid2.GetValue(position.x, position.y);
+                if (gridObject == null || gridObject.GetGem() == null)
+                {
+                    continue;
                 }
 
                 spotsToEpmty.Add(position);
-
-                int randomPowerUpType = Random.Range(0, gemTypesForPowerups.Length - 1);
-
-                var gem = grid2.GetValue(position.x, position.y).GetGem();     
             }
-            StartCoroutine(ExplodeGems(spotsToEpmty));
-            
+
+            if (spotsToEpmty.Count > 0)
+            {
+                StartCoroutine(ExplodeGems(spotsToEpmty));
+            }
+
             GameEventsManager.instance.gameEvents.ScoreFinalized();
-           yield return CoroutineUtils.AwaitTask(GameEventsManager.instance.gameEvents.PlayerDataSaved());
+            yield return CoroutineUtils.AwaitTask(GameEventsManager.instance.gameEvents.PlayerDataSaved());
             Debug.Log(powerupSpawns.Count);
 
             yield return new WaitForSeconds(0.1f);
