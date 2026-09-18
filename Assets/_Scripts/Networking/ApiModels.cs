@@ -7,13 +7,20 @@ namespace JadedBelles.Networking
     [Serializable]
     public class LoginRequest
     {
+        // Preferred field: either a username or an email address.
+        public string identifier;
+
+        // Legacy field kept in the payload so older API deployments that only
+        // read `email` keep working while a new build is rolling out.
         public string email;
+
         public string password;
     }
 
     [Serializable]
     public class RegisterRequest
     {
+        public string username;
         public string email;
         public string password;
         public string displayName;
