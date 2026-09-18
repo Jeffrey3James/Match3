@@ -178,7 +178,7 @@ public class SettingsPanel : MonoBehaviour {
       return;
     }
 
-    accountSettingsPanel.gameObject.SetActive(true);
+    accountSettingsPanel.Show();
   }
 
   // ------------------------------------------------------------------
