@@ -72,6 +72,9 @@ public class PreLevelBoosterPanel : MonoBehaviour
     [Tooltip("Play button that closes the panel and loads the game scene.")]
     [SerializeField] private Button playButton;
 
+    [Tooltip("Optional. Closes without spending coins or starting a level.")]
+    [SerializeField] private Button closeButton;
+
     [Tooltip("Optional. Panel root toggled on/off; defaults to this GameObject.")]
     [SerializeField] private GameObject panelRoot;
 
@@ -98,6 +101,7 @@ public class PreLevelBoosterPanel : MonoBehaviour
             playButton.onClick.RemoveAllListeners();
             playButton.onClick.AddListener(OnPlayClicked);
         }
+        if (closeButton != null) closeButton.onClick.AddListener(Hide);
     }
 
     private void OnEnable()
@@ -108,6 +112,25 @@ public class PreLevelBoosterPanel : MonoBehaviour
         MonetizationConfig.SelectedPreLevelBoosters.Clear();
         PlayerPrefs.DeleteKey(MonetizationConfig.PendingBoostersPrefsKey);
         RefreshAll();
+    }
+
+    private void OnDestroy()
+    {
+        if (playButton != null) playButton.onClick.RemoveListener(OnPlayClicked);
+        if (closeButton != null) closeButton.onClick.RemoveListener(Hide);
+    }
+
+    public void Show()
+    {
+        gameObject.SetActive(true);
+        if (panelRoot != null) panelRoot.SetActive(true);
+        transform.SetAsLastSibling();
+    }
+
+    public void Hide()
+    {
+        if (panelRoot != null) panelRoot.SetActive(false);
+        gameObject.SetActive(false);
     }
 
     private void WireToggle(BoosterSlot slot, string id, int cost)
@@ -188,7 +211,7 @@ public class PreLevelBoosterPanel : MonoBehaviour
         PlayerPrefs.SetString(MonetizationConfig.PendingBoostersPrefsKey, joined.ToString());
         PlayerPrefs.Save();
 
-        if (panelRoot != null) panelRoot.SetActive(false);
+        Hide();
 
         if (!string.IsNullOrEmpty(gameSceneName) &&
             SceneManager.GetActiveScene().name != gameSceneName)

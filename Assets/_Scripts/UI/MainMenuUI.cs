@@ -19,6 +19,9 @@ public class MainMenuUI : MonoBehaviour
              "see the menu underneath.")]
     [SerializeField] private GameObject menuContentRoot;
 
+    [Tooltip("Optional. Bottom navigation controls hidden while authentication is unresolved.")]
+    [SerializeField] private GameObject navigationRoot;
+
     [Header("UI Elements")]
     [SerializeField] private Button levelButton;
     [SerializeField] private Button AddLifeTestButton;
@@ -56,54 +59,81 @@ public class MainMenuUI : MonoBehaviour
 
   [SerializeField] private GameObject shopPanel;
   [SerializeField] private GameObject settingsPanel;
+    [SerializeField] private PreLevelBoosterPanel preLevelBoosterPanel;
 
     private const string HasSeenMainMenuPref = "HasSeenMainMenu";
+
+    private void Awake()
+    {
+        // One-time initial cleanup. Do not hide panels in OnEnable: callers may
+        // have deliberately opened one while re-enabling the menu.
+        SetToHome();
+    }
 
     private void Start()
     {
         SetUpMainMenu();
-        ApplySessionState();
         SessionService.OnStateChanged += OnSessionStateChanged;
+        ApplySessionState();
         Debug.Log("Setting Up Main Menu UI");
 
         // Auto-play on very first launch: if the player has never seen the menu
         // AND is at level 0, dive straight into level 0. Sets the pref so it never
         // happens twice for the same install.
         TryAutoPlayFirstLaunch();
+
+        if (homeButton != null) homeButton.onClick.AddListener(SetToHome);
+        if (shopButton != null) shopButton.onClick.AddListener(ShowShopPanel);
+        if (settingsButton != null) settingsButton.onClick.AddListener(ShowSettingsPanel);
+    }
+
+    private void SetToHome()
+    {
+        // Independent checks keep Home functional when any optional panel is absent.
+        // Login is deliberately excluded: Home must never dismiss the auth gate.
+        if (shopPanel != null)
+        {
+            var controller = shopPanel.GetComponent<ShopPanel>();
+            if (controller != null) controller.Hide();
+            else shopPanel.SetActive(false);
+        }
+        if (settingsPanel != null)
+        {
+            var controller = settingsPanel.GetComponent<SettingsPanel>();
+            if (controller != null) controller.Hide();
+            else settingsPanel.SetActive(false);
+        }
+        if (preLevelBoosterPanel != null) preLevelBoosterPanel.Hide();
+    }
+
+    private void ShowShopPanel()
+    {
+        if (!SessionService.IsResolved || shopPanel == null) return;
         SetToHome();
-
-      if (homeButton != null) {
-      homeButton.onClick.AddListener(() => SetToHome());
-      }
-
-    if (shopPanel != null) {
-      shopButton.onClick.AddListener(() => ShowShopPanel());
-      }
-
-    if (settingsButton != null) {
-      settingsButton.onClick.AddListener(() => ShowSettingsPanel());
-      }
+        var controller = shopPanel.GetComponent<ShopPanel>();
+        if (controller != null) controller.Show();
+        else shopPanel.SetActive(true);
     }
 
-  private void SetToHome() {
-    if (shopPanel != null && settingsPanel != null) {
-      shopPanel.SetActive(false);
-      settingsPanel.SetActive(false);
-      }
+    private void ShowSettingsPanel()
+    {
+        if (!SessionService.IsResolved || settingsPanel == null) return;
+        SetToHome();
+        var controller = settingsPanel.GetComponent<SettingsPanel>();
+        if (controller != null) controller.Show();
+        else settingsPanel.SetActive(true);
     }
 
-  private void ShowShopPanel() {
-    SetToHome();
-    shopPanel.SetActive(true);
-    }
-
-  private void ShowSettingsPanel() {
-    SetToHome();
-    settingsPanel.SetActive(true);
+    public void ShowPreLevelBoosterPanel()
+    {
+        if (!SessionService.IsResolved || preLevelBoosterPanel == null) return;
+        SetToHome();
+        preLevelBoosterPanel.Show();
     }
 
   private void TryAutoPlayFirstLaunch()
     {
+        if (!SessionService.IsResolved) return;
         if (PlayerHandler.instance == null) return;
         if (levelButton == null) return;
         if (PlayerHandler.instance.GetPlayerLevel() != 0) return;
@@ -119,6 +149,9 @@ public class MainMenuUI : MonoBehaviour
     private void OnDestroy()
     {
         SessionService.OnStateChanged -= OnSessionStateChanged;
+        if (homeButton != null) homeButton.onClick.RemoveListener(SetToHome);
+        if (shopButton != null) shopButton.onClick.RemoveListener(ShowShopPanel);
+        if (settingsButton != null) settingsButton.onClick.RemoveListener(ShowSettingsPanel);
     }
 
     // ------------------------------------------------------------------
@@ -132,6 +165,9 @@ public class MainMenuUI : MonoBehaviour
     /// </summary>
     private void ApplySessionState()
     {
+        SetMenuContentVisible(SessionService.IsResolved);
+        if (!SessionService.IsResolved) SetToHome();
+
         if (loginPanel == null)
         {
             if (!SessionService.IsResolved)
@@ -158,6 +194,7 @@ public class MainMenuUI : MonoBehaviour
         {
             // Signed out from the menu. Re-gate rather than leaving the menu live behind
             // the panel with the previous player's lives and level still on it.
+            SetToHome();
             SetMenuContentVisible(false);
             if (loginPanel != null) loginPanel.Show();
             return;
@@ -173,6 +210,7 @@ public class MainMenuUI : MonoBehaviour
     private void SetMenuContentVisible(bool visible)
     {
         if (menuContentRoot != null) menuContentRoot.SetActive(visible);
+        if (navigationRoot != null) navigationRoot.SetActive(visible);
     }
 
     private void Update()
@@ -262,6 +300,7 @@ public class MainMenuUI : MonoBehaviour
             levelButton.onClick.AddListener(() =>
                 {
                     Debug.Log("Level Button Clicked");
+                    if (!SessionService.IsResolved || PlayerHandler.instance == null) return;
                     if (!PlayerHandler.instance.CheckPlayerLives()) { return; }
                     PlayerHandler.instance.UseALifeFromPlayer();
                     SceneManager.LoadScene("GameScene");
