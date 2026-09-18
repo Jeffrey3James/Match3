@@ -48,6 +48,15 @@ public class MainMenuUI : MonoBehaviour
     private int lastStars;
     private bool hudBootstrapped;
 
+  [Header("Navigation Butons && Panels")]
+  [Tooltip("THe elements that allow the player to swap between the differents panels for buying. Will ve xpanded we add Guild & Collection")]
+  [SerializeField] private Button shopButton;
+    [SerializeField] private Button homeButton;
+    [SerializeField] private Button settingsButton;
+
+  [SerializeField] private GameObject shopPanel;
+  [SerializeField] private GameObject settingsPanel;
+
     private const string HasSeenMainMenuPref = "HasSeenMainMenu";
 
     private void Start()
@@ -61,9 +70,39 @@ public class MainMenuUI : MonoBehaviour
         // AND is at level 0, dive straight into level 0. Sets the pref so it never
         // happens twice for the same install.
         TryAutoPlayFirstLaunch();
+        SetToHome();
+
+      if (homeButton != null) {
+      homeButton.onClick.AddListener(() => SetToHome());
+      }
+
+    if (shopPanel != null) {
+      shopButton.onClick.AddListener(() => ShowShopPanel());
+      }
+
+    if (settingsButton != null) {
+      settingsButton.onClick.AddListener(() => ShowSettingsPanel());
+      }
     }
 
-    private void TryAutoPlayFirstLaunch()
+  private void SetToHome() {
+    if (shopPanel != null && settingsPanel != null) {
+      shopPanel.SetActive(false);
+      settingsPanel.SetActive(false);
+      }
+    }
+
+  private void ShowShopPanel() {
+    SetToHome();
+    shopPanel.SetActive(true);
+    }
+
+  private void ShowSettingsPanel() {
+    SetToHome();
+    settingsPanel.SetActive(true);
+    }
+
+  private void TryAutoPlayFirstLaunch()
     {
         if (PlayerHandler.instance == null) return;
         if (levelButton == null) return;

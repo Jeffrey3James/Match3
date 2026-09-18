@@ -93,8 +93,9 @@ namespace Match3Game
         private GridSystem2D<GridObj> grid2;
         private Vector2Int selectedGem = Vector2Int.one * -1;
 
-        #region Event Delegates
-        private System.Action onSwapStartedAction;
+        public ObjectiveTracker Objectives { get; private set; }
+    #region Event Delegates
+    private System.Action onSwapStartedAction;
         private System.Func<GemTypes, GemTypes> onGetGemTypeFunc;
         private System.Action onLevelCompletedAction;
         #endregion
@@ -245,12 +246,29 @@ namespace Match3Game
             onSwapStartedAction = () => { inputReader.enabled = false; };
             events.onSwapStarted += onSwapStartedAction;
 
-            SetObjectiveAmount();
+           Objectives = new ObjectiveTracker();
+           Objectives.Initialize(level.GetObjectives());
+      Objectives.OnAllObjectivesCompleted += HandleObjectivesCompleted;
+      SetObjectiveAmount();
             SetMaxMoves();
             DeselectGem();
-        }    
+        }
+    private bool levelEnding;
 
-       private void OnDestroy()
+    private void HandleObjectivesCompleted() {
+      if (levelEnding)
+        return;
+
+      levelEnding = true;
+
+      Debug.Log("Level won: all objectives completed.");
+
+      // Stop input / wait for current animations as appropriate.
+      // Then call your existing win-level path here.
+      GameOver();
+      }
+
+    private void OnDestroy()
         {
             if (Instance == this) Instance = null;
             inputReader.Fire -= OnSelectGem;
