@@ -2,6 +2,7 @@
 using Match3Game;
 using Unity.VisualScripting;
 using UnityEngine;
+using JadedBelles.Util.GridSystem;
 
 namespace Match3Game {
   [RequireComponent(typeof(SpriteRenderer))]

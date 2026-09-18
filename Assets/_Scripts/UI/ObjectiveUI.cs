@@ -12,7 +12,7 @@ public class ObjectiveUI : MonoBehaviour
 
     public void SetObjectiveImage(Sprite sprite)
     {
-        objectiveImage.sprite = sprite;
+        objectiveImage.sourceImage = sprite;
     }
 
     public void SetObjectiveCount(int count)
@@ -62,7 +62,7 @@ public class ObjectiveUI : MonoBehaviour
     // they can't drift from what's on-screen.
     // ------------------------------------------------------------------
 
-    public Sprite GetObjectiveSprite() => objectiveImage != null ? objectiveImage.sprite : null;
+    public Sprite GetObjectiveSprite() => objectiveImage != null ? objectiveImage.sourceImage : null;
     public int GetObjectiveCount() => objectiveCount;
 }
 

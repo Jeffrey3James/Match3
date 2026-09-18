@@ -1,6 +1,7 @@
 ﻿using Match3Game;
 using System.Collections.Generic;
 using UnityEngine;
+using JadedBelles.Util.GridSystem;
 
 [CreateAssetMenu(fileName = "Obstacle", menuName = "Match3/GemType/Obstacle")]
 public class Obstacle : GemTypes

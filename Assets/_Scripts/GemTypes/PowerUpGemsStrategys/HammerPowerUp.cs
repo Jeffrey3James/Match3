@@ -1,6 +1,7 @@
 ﻿using Match3Game;
 using System.Collections.Generic;
 using UnityEngine;
+using JadedBelles.Util.GridSystem;
 
 [CreateAssetMenu(fileName = "HammerPowerUp", menuName = "Match3/GemType/HammerPowerUp")]
 public class HammerPowerUp : PowerUpGems

@@ -7,6 +7,7 @@ using Match3Game.Levels;
 using StroTheGoat;
 using UnityEditor;
 using UnityEngine;
+using JadedBelles.Util.GridSystem;
 
 /// <summary>
 /// Data-driven level editor. Reads and writes Assets/Resources/Levels/levels.json —

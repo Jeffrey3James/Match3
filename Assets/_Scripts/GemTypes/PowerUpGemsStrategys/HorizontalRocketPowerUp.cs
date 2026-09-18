@@ -1,6 +1,7 @@
 ﻿using Match3Game;
 using UnityEngine;
 using System.Collections.Generic;
+using JadedBelles.Util.GridSystem;
 
 [CreateAssetMenu(fileName = "HorizontalRocketPowerUp", menuName = "Match3/GemType/HorizontalRocketPowerUp")]
 public class HorizontalRocketPowerUp : PowerUpGems

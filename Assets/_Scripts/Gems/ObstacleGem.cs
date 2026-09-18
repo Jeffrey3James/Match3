@@ -1,8 +1,7 @@
 ﻿using Match3Game;
-using System.Runtime.CompilerServices;
 using UnityEngine;
 using System.Collections.Generic;
-using Unity.VisualScripting;
+using JadedBelles.Util.GridSystem;
 
 public class ObstacleGem : Gem
 {

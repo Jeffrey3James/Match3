@@ -60,7 +60,7 @@ public class LevelOjectiveBanner : MonoBehaviour {
   private void SpawnIcon(Sprite sprite, string labelText) {
     var iconGO = Instantiate(icon.gameObject, container);
     var img = iconGO.GetComponentInChildren<Image>();
-    if (img != null) img.sprite = sprite;
+    if (img != null) img.sourceImage = sprite;
     var label = iconGO.GetComponentInChildren<TMPro.TextMeshProUGUI>();
     if (label != null) label.text = labelText;
     }

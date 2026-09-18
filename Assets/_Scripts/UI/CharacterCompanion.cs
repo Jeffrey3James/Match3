@@ -67,7 +67,7 @@ public class CharacterCompanion : MonoBehaviour
     private void OnEnable()
     {
         if (portraitImage != null && portraitSprite != null)
-            portraitImage.sprite = portraitSprite;
+            portraitImage.sourceImage = portraitSprite;
 
         TrySubscribe();
         StartIdle();

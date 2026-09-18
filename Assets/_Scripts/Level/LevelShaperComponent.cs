@@ -1,5 +1,6 @@
 using UnityEngine;
 using Match3Game;
+using JadedBelles.Util.GridSystem;
 
 [RequireComponent(typeof(SpriteRenderer))]
 

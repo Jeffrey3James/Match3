@@ -13,6 +13,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Match3Game;
 using UnityEngine;
+using JadedBelles.Util.GridSystem;
 
 namespace Match3Game.Act2
 {

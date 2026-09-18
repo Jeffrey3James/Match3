@@ -1,5 +1,6 @@
 using Match3Game;
 using UnityEngine;
+using JadedBelles.Util.GridSystem;
 
 public static class PowerupUtils
 {

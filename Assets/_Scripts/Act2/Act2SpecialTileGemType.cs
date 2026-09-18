@@ -8,6 +8,7 @@
 // PowerUpType enum or its switch(group.Count) mapping in Match3.FindMatches().
 using Match3Game;
 using UnityEngine;
+using JadedBelles.Util.GridSystem;
 
 namespace Match3Game.Act2
 {

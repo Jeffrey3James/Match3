@@ -118,7 +118,7 @@ public class DecoratePanel : MonoBehaviour
         if (icon != null)
         {
             Sprite chosen = done ? SafeGet(taskIconsAfter, i) : SafeGet(taskIconsBefore, i);
-            if (chosen != null) icon.sprite = chosen;
+            if (chosen != null) icon.sourceImage = chosen;
         }
 
         // Name and cost labels are pure display.
@@ -167,7 +167,7 @@ public class DecoratePanel : MonoBehaviour
         // Success. Swap sprite and celebrate.
         Image icon = SafeGet(taskIcons, taskIndex);
         Sprite after = SafeGet(taskIconsAfter, taskIndex);
-        if (icon != null && after != null) icon.sprite = after;
+        if (icon != null && after != null) icon.sourceImage = after;
 
         Button restoreBtn = SafeGet(taskRestoreButtons, taskIndex);
         if (restoreBtn != null) restoreBtn.gameObject.SetActive(false);
