@@ -86,6 +86,7 @@ namespace Match3Game {
                 Debug.LogWarning($"AudioManager.PlayNamed: no clip registered for key '{key}'.");
                 return;
             }
+            if (!SettingsPanel.MusicEnabled) return; // player muted audio in Settings
             audioSource.pitch = Mathf.Clamp(pitch, 0.1f, 3f);
             audioSource.PlayOneShot(clip);
             audioSource.pitch = 1f;
@@ -111,6 +112,7 @@ namespace Match3Game {
             // propagates into the board coroutines that call it (ExplodeGems etc.)
             // and kills the cascade mid-flight. Missing source/clip = silence, not a throw.
             if (audioSource == null || audioClip == null) return;
+            if (!SettingsPanel.MusicEnabled) return; // player muted audio in Settings
             audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
             audioSource.PlayOneShot(audioClip);
             audioSource.pitch = 1f;
@@ -119,6 +121,7 @@ namespace Match3Game {
         void PlaySafe(AudioClip audioClip)
         {
             if (audioSource == null || audioClip == null) return;
+            if (!SettingsPanel.MusicEnabled) return; // player muted audio in Settings
             audioSource.PlayOneShot(audioClip);
         }
 
