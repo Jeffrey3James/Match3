@@ -362,7 +362,22 @@ namespace Match3Game
       foreach (var match in matches) {
         if (IsValidPosition(match)) {
           var gem = grid2.GetValue(match.x, match.y).GetGem();
+
+          // Cache the gem type BEFORE clearing/destroying the gem. Unity
+          // objects can become invalid after Destroy(), so we must never
+          // query gem.GetGemType() after the object has been removed.
+          GemTypes clearedGemType = gem.GetGemType();
+
           grid2.SetValue(match.x, match.y, null);
+
+          // OBJECTIVE TRACKER BRIDGE — this was the missing connection.
+          // ObjectiveTracker owns the authoritative remaining counts per
+          // gem type. It ignores gem types that aren't objectives for the
+          // current level, so calling it for every cleared normal gem is
+          // safe. When the last objective reaches zero it raises
+          // OnAllObjectivesCompleted, which calls HandleObjectivesCompleted().
+          Objectives?.RegisterGemCleared(clearedGemType);
+
           ExplodeVFX(match);
 
           // SetLink kills the tween automatically if the gem GameObject is
@@ -372,14 +387,18 @@ namespace Match3Game
               .DOPunchScale(Vector3.one * 0.1f, ScaledPop, 1, 0.5f)
               .SetLink(gem.gameObject);
 
-          if (isGameOver) {
+          // BUGFIX: this was previously gated on `if (isGameOver)`, which is
+          // backwards — it silently blocked score/move updates for the
+          // entire game until a game-over state was already set, and would
+          // then keep awarding score/decrementing moves after the game had
+          // already ended. Score and move consumption must happen only
+          // while the level is still active.
+          if (!isGameOver) {
             scoreForThisLevel += gemValue;
             Debug.Log(scoreForThisLevel);
-            movesLeft--;
-            UpdateMovesText();
             GameEventsManager.instance.gameEvents.ScoreChanged(scoreForThisLevel);
             }
-          gem.GetChannel().Invoke(-1); // Notify the gem's channel that it has been destroyed
+          gem.GetChannel().Invoke(-1); // Notify the gem's channel that it has been destroyed (legacy UI path)
           yield return new WaitForSeconds(ScaledPop);
           Destroy(gem.gameObject);
           }
@@ -988,22 +1007,42 @@ namespace Match3Game
 
         private void GameOver()
         {
-            if (obstaclesToClear <= 0  && objectivesToClear <= 0)
+            // Once the level has entered a terminal state, no later cascade,
+            // event, or power-up callback is allowed to fire another
+            // win/loss event.
+            if (isGameOver) return;
+
+            // ObjectiveTracker is now the authoritative source for gem-type
+            // objective completion — NOT the legacy flat `objectivesToClear`
+            // counter, which can't distinguish which gem type was cleared
+            // and is unsafe for multi-objective levels. If no tracker exists
+            // yet (shouldn't happen post-Start, but guard anyway), fall back
+            // to treating objectives as complete so obstacle-only levels
+            // still work.
+            bool objectivesComplete = Objectives == null || Objectives.IsComplete;
+            bool obstaclesComplete = obstaclesToClear <= 0;
+
+            if (obstaclesComplete && objectivesComplete)
             {
                 isGameOver = true;
                 inputReader.enabled = false;
+                Debug.Log($"Level Completed. Objectives complete: {objectivesComplete}. Obstacles remaining: {obstaclesToClear}.");
                 GameEventsManager.instance.gameEvents.LevelCompleted();
+                return;
             }
-            else if (movesLeft <= 0)
+
+            if (movesLeft <= 0)
             {
                 isGameOver = true;
                 inputReader.enabled = false;
                 Debug.Log("Level Failed! No moves left.");
                 GameEventsManager.instance.gameEvents.LevelFailed();
-            }
 
-            float percentage = ((float)movesLeft / level.GetMaxMoves()) * 100f;
-            Debug.Log(percentage);
+                float percentage = level.GetMaxMoves() > 0
+                    ? ((float)movesLeft / level.GetMaxMoves()) * 100f
+                    : 0f;
+                Debug.Log(percentage);
+            }
         }
 
         /// <summary>
@@ -1016,7 +1055,11 @@ namespace Match3Game
         public bool TryResumeWithExtraMoves(int amount)
         {
             if (amount <= 0 || !isGameOver) return false;
-            if (obstaclesToClear <= 0 && objectivesToClear <= 0) return false; // level was won, not failed
+            // Use the same tracker-based completion check as GameOver() so this
+            // stays consistent for multi-objective levels — the legacy flat
+            // objectivesToClear counter isn't a reliable win signal anymore.
+            bool objectivesComplete = Objectives == null || Objectives.IsComplete;
+            if (obstaclesToClear <= 0 && objectivesComplete) return false; // level was won, not failed
             if (movesLeft > 0) return false; // failed for some other reason
 
             movesLeft += amount;
@@ -1239,15 +1282,25 @@ namespace Match3Game
 
         private void UpdateObstacleToClear()
         {
-            if (obstaclesToClear >= 0)
+            if (obstaclesToClear > 0)
             {
                 obstaclesToClear--;
             }
+
+            Debug.Log($"Obstacle cleared. Obstacles remaining: {obstaclesToClear}");
+
+            // Gem objectives may already be complete, so the last obstacle
+            // clearing could be the actual win trigger.
+            GameOver();
         }
 
         private void UpdateObjectivesToClear()
         {
-            if (objectivesToClear >= 0)
+            // Legacy listener for Level objective channels (used by the old
+            // HUD event path). ObjectiveTracker is now the authoritative
+            // objective system, so this flat counter is display-only and
+            // must NOT be used to decide level completion.
+            if (objectivesToClear > 0)
             {
                 objectivesToClear--;
             }
