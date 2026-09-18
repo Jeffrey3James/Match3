@@ -111,6 +111,23 @@ public class ShopPanel : MonoBehaviour
         }
     }
 
+    private void OnDestroy()
+    {
+        if (closeButton != null) closeButton.onClick.RemoveListener(OnCloseClicked);
+        if (restoreButton != null) restoreButton.onClick.RemoveListener(OnRestoreClicked);
+    }
+
+    public void Show()
+    {
+        gameObject.SetActive(true);
+        transform.SetAsLastSibling();
+    }
+
+    public void Hide()
+    {
+        gameObject.SetActive(false);
+    }
+
     // --------------------------------------------------------------
     // Tabs + rendering
     // --------------------------------------------------------------
@@ -205,7 +222,7 @@ public class ShopPanel : MonoBehaviour
     // --------------------------------------------------------------
     private void OnCloseClicked()
     {
-        gameObject.SetActive(false);
+        Hide();
     }
 
     private void OnRestoreClicked()

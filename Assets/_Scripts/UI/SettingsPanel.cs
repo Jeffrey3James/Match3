@@ -65,7 +65,7 @@ public class SettingsPanel : MonoBehaviour {
   [Header("Optional")]
   [SerializeField] private Button closeButton;
 
-  [Tooltip("The object hidden by Close. Defaults to this GameObject.")]
+  [Tooltip("The complete popup root, including its blocker and Close button. Defaults to this GameObject.")]
   [SerializeField] private GameObject panelRoot;
 
   private readonly List<(Toggle toggle, UnityAction<bool> handler)>
@@ -185,7 +185,23 @@ public class SettingsPanel : MonoBehaviour {
   // Close
   // ------------------------------------------------------------------
   private void OnCloseClicked () {
+    Hide();
+  }
+
+  public void Show () {
+    gameObject.SetActive(true);
+    if(panelRoot != null)
+      panelRoot.SetActive(true);
+    transform.SetAsLastSibling();
+    RefreshToggles();
+    RefreshAccountShortcut();
+  }
+
+  public void Hide () {
+    if(accountSettingsPanel != null)
+      accountSettingsPanel.Hide();
     if(panelRoot != null)
       panelRoot.SetActive(false);
+    gameObject.SetActive(false);
   }
 }
