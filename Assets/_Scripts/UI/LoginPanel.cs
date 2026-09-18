@@ -43,6 +43,8 @@ public class LoginPanel : MonoBehaviour
     [SerializeField] private Button signUpButton;
     [Tooltip("Optional. Skips auth entirely and closes the panel.")]
     [SerializeField] private Button guestButton;
+    [Tooltip("Optional. Continues as guest if authentication is unresolved; otherwise just closes.")]
+    [SerializeField] private Button closeButton;
     [Tooltip("Optional. When present, kicks off the self-serve password-reset flow against the " +
              "email in the Username field. Required for store submissions (App Store / Google Play).")]
     [SerializeField] private Button forgotPasswordButton;
@@ -50,7 +52,7 @@ public class LoginPanel : MonoBehaviour
     [Header("Optional")]
     [Tooltip("Optional. Shows errors and progress messages.")]
     [SerializeField] private TextMeshProUGUI statusText;
-    [Tooltip("Optional. The GameObject to hide once the player is signed in or chooses guest. Defaults to this GameObject.")]
+    [Tooltip("Complete popup root, including blocker and Close button. Defaults to this GameObject.")]
     [SerializeField] private GameObject panelRoot;
 
     [Header("Behavior")]
@@ -75,11 +77,12 @@ public class LoginPanel : MonoBehaviour
         if (loginButton != null) loginButton.onClick.AddListener(OnLoginClicked);
         if (signUpButton != null) signUpButton.onClick.AddListener(OnSignUpClicked);
         if (guestButton != null) guestButton.onClick.AddListener(OnGuestClicked);
+        if (closeButton != null) closeButton.onClick.AddListener(OnCloseClicked);
         if (forgotPasswordButton != null) forgotPasswordButton.onClick.AddListener(OnForgotPasswordClicked);
 
         // Pressing Enter in the password field submits a login.
         if (passwordField != null)
-            passwordField.onSubmit.AddListener(_ => OnLoginClicked());
+            passwordField.onSubmit.AddListener(OnPasswordSubmitted);
 
         if (autoSizeInputText)
         {
@@ -124,7 +127,9 @@ public class LoginPanel : MonoBehaviour
         if (loginButton != null) loginButton.onClick.RemoveListener(OnLoginClicked);
         if (signUpButton != null) signUpButton.onClick.RemoveListener(OnSignUpClicked);
         if (guestButton != null) guestButton.onClick.RemoveListener(OnGuestClicked);
+        if (closeButton != null) closeButton.onClick.RemoveListener(OnCloseClicked);
         if (forgotPasswordButton != null) forgotPasswordButton.onClick.RemoveListener(OnForgotPasswordClicked);
+        if (passwordField != null) passwordField.onSubmit.RemoveListener(OnPasswordSubmitted);
     }
 
     private void Start()
@@ -132,12 +137,8 @@ public class LoginPanel : MonoBehaviour
         WarnAboutMissingSlots();
 
         // Default path: SessionBootstrap already resolved the session behind the loading
-        // screen and calls Show() only if auth is genuinely required. Stay hidden.
-        if (!resolveSessionOnStart)
-        {
-            if (SessionService.IsResolved) Hide();
-            return;
-        }
+        // screen. The caller owns visibility; a deferred Start must not undo Show().
+        if (!resolveSessionOnStart) return;
 
         // Standalone fallback for scenes with no SessionBootstrap.
         SetBusy(true, "Checking session...");
@@ -161,6 +162,20 @@ public class LoginPanel : MonoBehaviour
     // ------------------------------------------------------------------
     // Button handlers
     // ------------------------------------------------------------------
+    private void OnPasswordSubmitted(string _)
+    {
+        OnLoginClicked();
+    }
+
+    private void OnCloseClicked()
+    {
+        if (_busy) return;
+
+        // Dismissal is not logout and must not downgrade an existing signed-in session.
+        if (SessionService.IsResolved) Hide();
+        else OnGuestClicked();
+    }
+
     private void OnLoginClicked()
     {
         if (_busy) return;
@@ -376,6 +391,7 @@ public class LoginPanel : MonoBehaviour
         if (loginButton != null) loginButton.interactable = !busy;
         if (signUpButton != null) signUpButton.interactable = !busy;
         if (guestButton != null) guestButton.interactable = !busy;
+        if (closeButton != null) closeButton.interactable = !busy;
         if (forgotPasswordButton != null) forgotPasswordButton.interactable = !busy;
         if (usernameField != null) usernameField.interactable = !busy;
         if (passwordField != null) passwordField.interactable = !busy;
@@ -398,25 +414,18 @@ public class LoginPanel : MonoBehaviour
     /// <summary>Shows the panel.</summary>
     public void Show()
     {
-        // Reactivate BOTH the outer GameObject that owns this component AND the
-        // inner panelRoot (which usually points at a child container holding the
-        // fields/buttons). Historically Show() only toggled panelRoot, so if the
-        // outer GameObject had been deactivated by an ancestor (e.g. MainMenuUI
-        // toggling menuContentRoot) the inner root would come back active-in-self
-        // but active-in-hierarchy=false — the background rendered but every child
-        // stayed invisible. Symmetric with Hide() below.
+        // Also support legacy scenes that point panelRoot at a child frame.
         if (!gameObject.activeSelf) gameObject.SetActive(true);
         if (panelRoot != null && !panelRoot.activeSelf) panelRoot.SetActive(true);
-        SetStatus("");
+        transform.SetAsLastSibling();
+        if (!_busy) SetStatus("");
     }
 
     /// <summary>Hides the panel.</summary>
     public void Hide()
     {
-        // Only toggle panelRoot off — leave the outer GameObject alone so any
-        // component here (this MonoBehaviour, coroutines, event subscriptions)
-        // keeps running and can be shown again cleanly.
         if (panelRoot != null) panelRoot.SetActive(false);
+        gameObject.SetActive(false);
     }
 
     /// <summary>
