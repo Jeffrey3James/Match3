@@ -17,6 +17,7 @@ namespace Match3Game.Act2
             targetGemType = target;
         }
 
+
         public GemTypes GetTargetGemType() => targetGemType;
     }
 }

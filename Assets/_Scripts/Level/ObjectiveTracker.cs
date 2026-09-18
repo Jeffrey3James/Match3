@@ -30,17 +30,17 @@ public sealed class ObjectiveTracker {
       }
 
     foreach (ObjectiveConfig objective in objectives) {
-      if (objective.gemTypes == null) {
+      if (objective.typesToClear == null) {
         Debug.LogWarning("ObjectiveTracker: Objective has no gem type.");
         continue;
         }
 
       int startingAmount = Mathf.Max(0, objective.amountToClear);
 
-      if (remainingByGemType.ContainsKey(objective.gemTypes)) {
-        remainingByGemType[objective.gemTypes] += startingAmount;
+      if (remainingByGemType.ContainsKey(objective.typesToClear)) {
+        remainingByGemType[objective.typesToClear] += startingAmount;
         } else {
-        remainingByGemType.Add(objective.gemTypes, startingAmount);
+        remainingByGemType.Add(objective.typesToClear, startingAmount);
         }
       }
 
