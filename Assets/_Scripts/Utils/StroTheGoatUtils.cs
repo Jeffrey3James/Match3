@@ -1,6 +1,5 @@
 ﻿using System.Collections;
 using UnityEngine;
-using UnityEngine.UIElements;
 using System.Threading.Tasks;
 using System;
 using System.ComponentModel;
@@ -19,48 +18,6 @@ namespace StroTheGoat
         public static readonly Color Gold = new Color(253f / 255f, 127f / 255f, 8f / 255f, 1f);
         public static readonly Color Purple = new Color(107f / 255f, 8f / 255f, 255f / 255f, 1f);
         public static readonly Color Red = new Color(255f / 255f, 0f / 255f, 0f / 255f, 1f);
-    }
-
-    public static class VisualElementsExtensions
-    {
-        public static VisualElement CreateChild(this VisualElement parent, params string[] classes)
-        {
-            var child = new VisualElement();
-            child.AddClass(classes).AddTo(parent);
-            return child;
-        }
-
-        public static T CreateChild<T>(this VisualElement parent, params string[] classes) where T : VisualElement, new()
-        {
-            var child = new T();
-            child.AddClass(classes).AddTo(parent);
-            return child;
-        }
-
-        public static T AddTo<T>(this T child, VisualElement parent) where T : VisualElement, new()
-        {
-            parent.Add(child);
-            return child;
-        }
-
-        public static T AddClass<T>(this T visualElement, params string[] classes) where T : VisualElement
-        {
-            foreach (string cls in classes)
-            {
-                if (!string.IsNullOrEmpty(cls))
-                {
-                    visualElement.AddToClassList(cls);
-                }
-            }
-
-            return visualElement;
-        }
-
-        public static T WithManipulators<T>(this T visualElement, IManipulator maniuplator) where T : VisualElement
-        {
-            visualElement.AddManipulator(maniuplator);
-            return visualElement;
-        }
     }
 
     public static class WaitExtensions

@@ -6,7 +6,7 @@ public abstract class EventListener<J> : MonoBehaviour
     [SerializeField] EventChannel<J> eventChannel;
     [SerializeField] UnityEvent<J> unityEvent;
 
-    protected void Awake()
+    protected void OnEnable()
     {
         if(eventChannel == null)
         {
@@ -15,9 +15,12 @@ public abstract class EventListener<J> : MonoBehaviour
         eventChannel.Register(this);
     }
 
-    protected void OnDestroy()
+    protected void OnDisable()
     {
-        eventChannel.Deregister(this);
+    if (eventChannel == null) {
+      return;
+      }
+    eventChannel.Deregister(this);
     }
 
     public void Raise(J value)

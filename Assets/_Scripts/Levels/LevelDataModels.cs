@@ -55,6 +55,20 @@ namespace Match3Game.Levels
         public List<CellData> excludedCells = new List<CellData>();
         public List<ObjectiveData> objectives = new List<ObjectiveData>();
         public List<ObstacleData> obstacles = new List<ObstacleData>();
+
+        /// <summary>
+        /// Level flavor. Missing / null / empty / "normal" all mean a standard level.
+        /// "bonus" -> LevelHandler treats this as a no-fail 60s bonus level (see
+        /// <see cref="BonusTypeName"/> and LevelHandler.BonusTimeSeconds). Additional
+        /// values may be added later; unknown values fall back to normal.
+        /// </summary>
+        public string type;
+
+        public const string BonusTypeName = "bonus";
+
+        public bool IsBonus =>
+            !string.IsNullOrEmpty(type) &&
+            string.Equals(type.Trim(), BonusTypeName, StringComparison.OrdinalIgnoreCase);
     }
 
     [Serializable]

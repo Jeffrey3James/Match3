@@ -25,6 +25,29 @@ namespace JadedBelles.Networking
         public string refreshToken;
     }
 
+    /// <summary>
+    /// Body for POST /api/accountDeletion/request. The public web form on
+    /// jadedbelles.com and this Unity client both post the same shape to
+    /// the same endpoint — the API doesn't care which surface sent it.
+    /// </summary>
+    [Serializable]
+    public class AccountDeletionRequestBody
+    {
+        public string email;
+    }
+
+    /// <summary>
+    /// Body for POST /api/v1/auth/password-reset/request. Same shape as
+    /// the account-deletion request — same email round-trip pattern. The
+    /// game only initiates the reset; the user completes it from the
+    /// emailed link on the website (there is no in-app confirm step).
+    /// </summary>
+    [Serializable]
+    public class PasswordResetRequestBody
+    {
+        public string email;
+    }
+
     /// <summary>Generic save request without optimistic-concurrency metadata.</summary>
     [Serializable]
     public class PutGameSaveRequest
@@ -81,6 +104,11 @@ namespace JadedBelles.Networking
         public int schemaVersion;
         public int revision;
         public string updatedAt;
+        // Opaque JSON blob produced by PlayerDataManager. The payload's shape is defined by
+        // the PlayerData type in PlayerHandler.cs and is versioned by schemaVersion above.
+        // Adding fields to PlayerData is additive: old clients simply ignore unknown keys.
+        // Meta-system fields (stars, winStreak, decorateProgress, *Boosters) live inside
+        // this blob; the wire type does not need per-field members.
         public string saveData;
     }
 

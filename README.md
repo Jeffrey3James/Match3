@@ -26,7 +26,7 @@ Three scenes are in the build, in order:
 
 | Scene | Role |
 | --- | --- |
-| `AuthSplashScreen` | Boot scene. Hosts every persistent singleton, shows the logo for ~3s, restores a saved session silently in the background, then loads `MainMenu`. |
+| `AuthSplashScreen` | Boot scene. Hosts every persistent singleton, shows the loading screen, resolves the session, then loads `MainMenu`. |
 | `MainMenu` | Level select, player stats (lives, coins), navigation. |
 | `GameScene` | The actual match-3 board. |
 
@@ -35,7 +35,18 @@ Two extra scenes are **not** in the build and must not be deleted:
 - `LevelConfigScene` — the canvas the level editor renders its preview into.
 - `Match3SceneTemplate _DO NOT DELETE_` — template for new board scenes.
 
-On the splash screen, `AuthManager` runs a 3-second countdown and a session check in parallel. If a refresh token exists in `TokenStore`, it silently refreshes; otherwise the player continues as a **guest**. The menu loads only when both finish, so a slow network never blocks past the logo. Guests are never gated.
+**`SessionBootstrap` is the only auth flow.** It lives in the splash scene, shows the loading screen, and resolves the session, level catalog, and player data as gated steps. Then it loads `MainMenu` — **always**, whatever the auth outcome.
+
+The split is deliberate:
+
+| Stage | Responsibility |
+| --- | --- |
+| `AuthSplashScreen` | Branding and loading. Auth *runs* here, but the player is never asked for credentials. |
+| `MainMenu` | If the session resolved, nothing happens. If it didn't, `MainMenuUI` shows the login panel. |
+
+So a returning player sees splash → bar → menu and is never interrupted, and a new player lands on a recognisable menu rather than being met by a form. See [Loading screen and auth UI](#loading-screen-and-auth-ui).
+
+The old `AuthManager` was removed. It gated the boot on a fixed 3-second logo timer regardless of how long the work actually took, and — worse — it called `TokenStore.Clear()` whenever a token refresh failed, so a player who opened the game with no signal got silently logged out. `SessionService` now tells "the server rejected this session" apart from "I couldn't reach the server" and only clears tokens for the first.
 
 ---
 
@@ -123,7 +134,162 @@ The save payload is an **opaque JSON document owned by the game** — the API ne
 
 **Conflict handling:** every write bumps a server-side `Revision`. The client sends the last revision it saw as `baseRevision`; if it no longer matches, the API returns `409 Conflict` with the server's current save, and the client keeps whichever side has the newer `updatedAt`.
 
-> ⚠️ **`JadedBellesApiClient.GameProductSlug` is currently `"match3-quest"`** — the seeded platform product slug. Confirm this matches the real production product for Xandria Gem Adventure and change that one constant if not.
+---
+
+## Loading screen and auth UI
+
+All of this is **plain uGUI**. There is no UI Toolkit anywhere in the project — no UXML, no USS, no `UIDocument`, no `Resources.Load` for UI. Runtime-attached UI Toolkit never bound reliably here (see [Gotchas](#gotchas)), so every reference was removed.
+
+Five components, all Inspector drag-and-drop:
+
+| Script | Role |
+| --- | --- |
+| `UI/BreathingImage.cs` | Organic pulse for the loading art — scale, optional alpha and rotation sway. |
+| `UI/LoadingBar.cs` | Filled Image that fills upward, speed-gated against real progress. |
+| `UI/LoadingScreen.cs` | Step registry and dismissal gating. Singleton via `LoadingScreen.Instance`. |
+| `UI/SessionBootstrap.cs` | Owns the whole boot: load steps, login panel, and the scene transition. |
+| `UI/LoginPanel.cs` | Two fields, two buttons. Purely reactive — it does not decide when to appear. |
+| `Networking/SessionService.cs` | Single source of truth for auth state. Not a MonoBehaviour. |
+
+### Scene setup
+
+> Field-by-field drag lists, a test checklist, and a troubleshooting table are in **[docs/WIRING-GUIDE.md](docs/WIRING-GUIDE.md)**. The summary below is enough to get oriented.
+
+**1. Loading screen.** Canvas → full-screen panel, `LoadingScreen` on the panel root.
+
+- Child Image with your logo/art → add `BreathingImage`. Nothing to assign; it auto-finds the `Image` on its own GameObject.
+- Child Image for the bar fill → add `LoadingBar`, drag that Image into **Fill Image**. Set Image **Type = Filled**. Fill Method and Origin are forced to Vertical/Bottom in `Awake`, so the bar always moves up even if you forget.
+- Optionally drag a `TextMeshProUGUI` into **Status Label** (on `LoadingScreen`) and/or **Percent Label** (on `LoadingBar`).
+- A `CanvasGroup` is added automatically if absent; it drives the fade-out.
+
+**2. Login panel.** Canvas → panel, `LoginPanel` on the root. Drag in:
+
+| Slot | Type | Notes |
+| --- | --- | --- |
+| Username Field | `TMP_InputField` | This is the account **email**. |
+| Password Field | `TMP_InputField` | Set Content Type = **Password**. |
+| Login Button | `Button` | |
+| Sign Up Button | `Button` | Display name is derived from the email local part. |
+| Guest Button | `Button` | Optional. |
+| Status Text | `TextMeshProUGUI` | Optional. Shows errors. |
+
+> **Do not wire the Buttons' OnClick lists in the Inspector.** `LoginPanel.Awake` adds its own listeners. Wiring both fires every action twice.
+
+**3. Boot object.** The `SessionBootstrap` GameObject already exists in `AuthSplashScreen` (it's the old `AuthManager` object, with the script swapped). Drag in the `LoadingScreen` and confirm **Next Scene** is `MainMenu`.
+
+**4. Login panel — in the `MainMenu` scene, not the splash.** Same slots as above. Leave its GameObject **disabled**; `MainMenuUI` activates it only when the session didn't resolve, and hides it again the moment the player signs in or picks guest. Drag it into `MainMenuUI` → **Login Panel**, and optionally wrap your menu controls in one object dragged into **Menu Content Root** so they hide behind the panel.
+
+If the `LoadingScreen` reference is missing, `SessionBootstrap` falls back to a no-visuals path that still resolves auth and still changes scene, so a forgotten drag can't strand the player on the splash.
+
+---
+
+## End-of-level buttons
+
+`UI/LevelResultPanel.cs` owns the game-over window. **One panel, four buttons**, shown per result — a hidden button is deactivated, not just greyed out, so a Layout Group closes the gap:
+
+| Button | Win | Loss |
+| --- | --- | --- |
+| Next Level | ✅ (hidden on the final level) | — |
+| Retry | — | ✅ |
+| Main Menu | ✅ | ✅ |
+| Watch Ad: +5 moves | — | ✅ when `AdManager` says an ad is loaded and the player is eligible |
+
+Offering "+5 moves" after a win is meaningless, and "Next Level" after a loss would skip progression, so neither is ever rendered for the wrong result.
+
+### Setup
+
+- Put `LevelResultPanel` on the game-over window root.
+- **Give the button container a Horizontal or Vertical Layout Group.** Without one, hidden buttons leave holes. Drag that container into **Button Container** so the panel can force a rebuild before it appears (otherwise the layout visibly pops on the first frame).
+- Drag in the four buttons and the optional header text. Any slot left empty is skipped.
+- Drag the panel into `Match3UI` → **Level Result Panel**. If you forget, it self-finds one in the scene (including inactive objects) and logs an error if there isn't one.
+
+> **Do not wire the buttons' OnClick lists in the Inspector.** `LevelResultPanel.Awake` adds its own listeners.
+
+### How win vs loss is detected
+
+`onScoreFinalized` fires for **both** outcomes, so it can't be used alone to pick a button set. `Match3UI` latches the result from `onLevelCompleted` / `onLevelFailed` first, then `onScoreFinalized` reveals the panel with that result. A loss shows the panel immediately rather than waiting on a score tally that may never run. `Show()` is idempotent, so the double path is safe.
+
+### Next Level
+
+`PlayerHandler` increments `playerLevel` on `onLevelCompleted`, and re-reads the current level from the catalog on **every** scene load. So Next Level just reloads `GameScene` — there's no explicit "advance" call, and Retry and Next Level differ only in that the counter already moved.
+
+Next Level auto-hides when `playerLevel >= LevelHandler.LevelCount`, and the header switches to `finalLevelHeader`.
+
+### Lives
+
+Retry and Next Level both charge a life through `PlayerHandler`, matching the main menu's gate. Both are toggleable (`retryCostsALife`, `nextLevelCostsALife`).
+
+> ⚠️ This is a **behaviour change**. The old Retry button reloaded the scene without charging anything, so retrying was a free life and the life economy could be bypassed indefinitely. If that was deliberate, turn `retryCostsALife` off.
+
+If the player is out of lives, the button refuses, the remaining buttons hide, and the header reads `OUT OF LIVES` — leaving Main Menu as the only way out.
+
+---
+
+## Loading screen internals
+
+### How progress is gated
+
+`LoadingBar` shows **`min(constant-speed ramp, real reported progress)`**. Two independent limits, both enforced every frame:
+
+1. **Constant speed** — the fill moves at a fixed units-per-second rate (`fillSpeed`, default `0.35`). However fast the data actually arrives, the bar never jumps. A 20 ms load and a 3 s load look identical to the player until the ceiling moves.
+2. **Cannot outrun the data** — the displayed value is clamped to reported progress. If only 40% of the work is confirmed, the bar stops dead at 40% regardless of elapsed time.
+
+Progress only ever moves forward; a slow step finishing after a fast one cannot yank the bar backwards.
+
+The screen then needs **three** gates before it dismisses:
+
+- every registered step is complete,
+- the bar has visually reached 100% at its own pace,
+- `minimumDisplaySeconds` has elapsed (default `1.25`, prevents a flash on instant loads).
+
+### Boot sequence
+
+`SessionBootstrap` registers three steps up front so the denominator stays stable, then resolves them in order:
+
+```
+session   -> SessionService.Restore()
+levels    -> waits on LevelHandler.LevelsReady
+playerData-> PlayerDataManager.PullRemotePlayerData()  (skipped for guests)
+```
+
+Each completion raises the ceiling by 1/3 and the bar crawls toward it. Once the screen dismisses, `SessionBootstrap` checks `SessionService.IsResolved`:
+
+- **Resolved** (signed in, offline-signed-in, or guest) → the login panel is never activated.
+- **Needs auth** → the login panel is shown.
+
+A returning player with a valid — or merely expired-but-refreshable — token never sees the login panel. Nothing else in the UI has to branch on auth state.
+
+Every step has a timeout (`stepTimeoutSeconds`, default 15 s) so a hung request can't strand the player on the loading screen.
+
+### Session state
+
+`SessionService` is the only thing that decides whether the player is signed in. `LoginPanel` routes login, sign-up, guest, and logout through it rather than touching `PlayerPrefs` directly, so the guest flag isn't tracked in two places.
+
+| State | Meaning | Login panel? |
+| --- | --- | --- |
+| `SignedIn` | Verified account session. | Hidden |
+| `OfflineSignedIn` | Tokens exist, server unreachable. | Hidden |
+| `Guest` | Player chose guest. | Hidden |
+| `NeedsAuth` | No usable session. | **Shown** |
+| `Unknown` | Restore hasn't run yet. | — |
+
+**Persistent login.** `TokenStore` keeps access and refresh tokens in `PlayerPrefs` across launches, and `JadedBellesApiClient` refreshes on a `401` and retries once. `Restore()` calls `GET /api/v1/auth/me` to verify rather than trusting `HasSession()`, which only proves the token strings exist.
+
+**Offline does not log you out.** A transport failure (DNS, timeout, no connection) resolves to `OfflineSignedIn` and keeps the tokens. Only a genuine auth rejection clears them. A player on a plane stays signed in.
+
+### Driving the loading screen from your own code
+
+```csharp
+LoadingScreen.Instance.Show("Connecting...");
+LoadingScreen.Instance.RegisterSteps("levels", "saves");
+
+// ... later, as each finishes ...
+LoadingScreen.Instance.CompleteStep("levels", "Levels loaded.");
+LoadingScreen.Instance.CompleteStep("saves", "Progress synced.");
+// screen dismisses itself once the bar catches up
+```
+
+For a long single step, `ReportPartialProgress(0..1)` fills within that step's slice. `ReportProgressDirect(0..1)` bypasses step tracking entirely. `ForceComplete()` finishes regardless of outstanding steps.
 
 ---
 
@@ -138,11 +304,12 @@ Assets/
     Level/            Level.cs — a board instance, hydrated at runtime from LevelData
     Levels/           LevelDataModels.cs (JSON DTOs), GemTypeRegistry.cs (name -> asset)
     Managers/         LevelHandler (level catalog), PlayerHandler, AudioManager
-    Networking/       JadedBellesApiClient, ApiModels, TokenStore
-    Utils/            AuthManager, PlayerDataManager, Timer, StroTheGoatUtils
+    Networking/       JadedBellesApiClient, ApiModels, TokenStore, SessionService
+    Utils/            PlayerDataManager, Timer, StroTheGoatUtils
     Gems/ GemTypes/   Gem behaviour, gem/obstacle/power-up ScriptableObject types
     GridSystem/       Grid math
-    UI/               Menus and HUD
+    UI/               Menus, HUD, LoginPanel, LevelResultPanel, LoadingScreen/LoadingBar/
+                      BreathingImage, SessionBootstrap.  All plain uGUI — no UI Toolkit.
     LevelDesignEditorWindow.cs, LevelEditorRuntime.cs
   Resources/          GemTypeRegistry.asset, Levels/levels.json  (runtime-loaded)
   _Prefabs/ _MyGems/ Images/ WebAssets/ Travis Game Assets/
@@ -175,14 +342,17 @@ No profile yet — create one. Nothing in the codebase is iOS-hostile.
 
 ## Gotchas
 
-- **Always launch from `AuthSplashScreen`.** Singletons and the level catalog are created there.
+- **Always launch from `AuthSplashScreen`.** Singletons, the level catalog, and `SessionBootstrap` all live there. Nothing else advances to `MainMenu`.
 - **Editor code must be guarded.** Anything touching `UnityEditor` needs `#if UNITY_EDITOR` or device and WebGL builds will fail to compile. This has bitten this project before.
 - **New gems/obstacles must be added to `Resources/GemTypeRegistry.asset`**, otherwise level JSON referencing them silently fails to hydrate.
 - **`Assets.zip` (88 MB) is committed at the repo root.** It bloats every clone and is almost certainly a leftover backup. Consider deleting it and adding `*.zip` to `.gitignore`.
 - **Don't assume levels are loaded.** Subscribe to `LevelHandler.OnLevelsReady` or check `LevelsReady`.
+- **Don't reintroduce UI Toolkit.** Runtime-attached `UIDocument` + `VisualTreeAsset` repeatedly failed to bind its root here (tracked as JADED-UI-001) across several attempted fixes. Every UXML/USS asset and `UnityEngine.UIElements` reference was removed. Build UI with uGUI prefabs and Inspector drag-slots.
+- **Don't wire button OnClick in the Inspector for `LoginPanel`.** It adds its own listeners in `Awake`; doing both fires each action twice.
 
 ## Known TODO
 
-- **Login/register UI does not exist yet.** The plumbing is done — `JadedBellesApiClient` has `Login`, `Register`, and `Logout` ready — but the canvas needs building in the Editor and wiring to those calls.
+- **Loading screen and login panel canvases still need building in the Editor.** All the code exists and is Inspector-driven — see [Loading screen and auth UI](#loading-screen-and-auth-ui) for exactly which slots to fill. Until then `SessionBootstrap` runs its no-visuals fallback path and boots straight to `MainMenu`.
+- `CountdownTimer` in `StroTheGoatUtils.cs` lost its only consumer when `AuthManager` was removed. Harmless, but it's dead code now.
 - WebGL and iOS build profiles need to be created.
-- Confirm `GameProductSlug` against the production product catalog.
+- Google Play Console registration deadline is **Sept 30, 2026**. Package name `com.JadedBelles.GemJam`.

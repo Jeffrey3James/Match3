@@ -1,8 +1,9 @@
 ﻿using Match3Game;
 using UnityEngine;
+using System.Collections.Generic;
 
 [CreateAssetMenu(fileName = "MissilePowerUp", menuName = "Match3/GemType/MissilePowerUp")]
-public class MissilePowerUp : PowerUpGems 
+public class MissilePowerUp : PowerUpGems
 {
     protected override void OnEnable()
     {
@@ -14,55 +15,115 @@ public class MissilePowerUp : PowerUpGems
     {
         Debug.Log($"Activating Missile PowerUp at ({x}, {y}) for gem {gem.name}");
 
+        // Detonate the missile's own cell.
         ExplodeGem(gem, grid, x, y, powerUpAudio);
-        for (int nx = 0; nx < grid.Width; nx++)
+
+        // Fire four seeking projectiles in a plus pattern. The missile is
+        // stronger than a rocket because it covers both axes; the seek rule
+        // is the same (max one diagonal hop per three straight hops).
+        FireSeekingProjectile(grid, x, y, +1, 0);
+        FireSeekingProjectile(grid, x, y, -1, 0);
+        FireSeekingProjectile(grid, x, y, 0, +1);
+        FireSeekingProjectile(grid, x, y, 0, -1);
+    }
+
+    private void FireSeekingProjectile(GridSystem2D<GridObj> grid, int startX, int startY,
+                                       int stepX, int stepY)
+    {
+        int cx = startX + stepX;
+        int cy = startY + stepY;
+        int straightSinceDiagonal = 0;
+        int safety = grid.Width + grid.Height + 4;
+
+        while (cx >= 0 && cx < grid.Width && cy >= 0 && cy < grid.Height && safety-- > 0)
         {
-            if (nx == x) continue; // Skip the origin gem, already exploded
+            List<Vector2Int> objectivePositions = null;
+            if (Match3.Instance != null)
+                objectivePositions = Match3.Instance.GetActiveObjectivePositions();
 
-            var gridObj = grid.GetValue(nx, y);
-            if (gridObj != null)
+            bool isCurrentObjective = objectivePositions != null &&
+                                      objectivePositions.Contains(new Vector2Int(cx, cy));
+
+            bool canDiagonalHop = objectivePositions != null && objectivePositions.Count > 0
+                                  && !isCurrentObjective
+                                  && straightSinceDiagonal >= 3;
+
+            if (canDiagonalHop && TryPickNearestObjectiveBias(objectivePositions,
+                                                              cx, cy, stepX, stepY,
+                                                              out int biasX, out int biasY))
             {
-                var adjacentGem = gridObj.GetGem();
-                if (adjacentGem != null)
-                {
-                    if (adjacentGem.GetGemType().gemCategory != GemCategory.Normal)
-                    {
-                        adjacentGem.Activate(); // Trigger chain reaction for powerups
-                    }
-                    if (adjacentGem.GetGemType().IsObstacle())
-                    {
-                        base.ExplodeGem(adjacentGem, grid, nx, y, powerUpAudio);
-                    }
-                    ExplodeGem(adjacentGem, grid, nx, y, powerUpAudio);
-                }
+                ExplodeAt(grid, cx, cy);
+                cx += biasX;
+                cy += biasY;
+                if (cx < 0 || cx >= grid.Width || cy < 0 || cy >= grid.Height) break;
+                ExplodeAt(grid, cx, cy);
+                straightSinceDiagonal = 0;
             }
+            else
+            {
+                ExplodeAt(grid, cx, cy);
+                straightSinceDiagonal++;
+            }
+
+            cx += stepX;
+            cy += stepY;
         }
-        // Iterate over the entire row (all columns, same y)
-        for (int ny = 0; ny < grid.Height; ny++)
+    }
+
+    private static bool TryPickNearestObjectiveBias(List<Vector2Int> objectives,
+                                                    int cx, int cy, int stepX, int stepY,
+                                                    out int biasX, out int biasY)
+    {
+        biasX = 0; biasY = 0;
+        Vector2Int? best = null;
+        int bestDist = int.MaxValue;
+
+        foreach (var o in objectives)
         {
-            if (ny == y) continue; // Skip the origin gem, already exploded
+            int dx = o.x - cx;
+            int dy = o.y - cy;
+            if (stepX != 0 && System.Math.Sign(dx) != System.Math.Sign(stepX) && dx != 0) continue;
+            if (stepY != 0 && System.Math.Sign(dy) != System.Math.Sign(stepY) && dy != 0) continue;
 
-            var gridObj = grid.GetValue(x, ny);
-            if (gridObj != null)
-            {
-                var adjacentGem = gridObj.GetGem();
-                if (adjacentGem != null)
-                {
-                    if (adjacentGem.GetGemType().gemCategory != GemCategory.Normal)
-                    {
-                        adjacentGem.Activate(); // Trigger chain reaction for powerups
-                    }
-                    else
-                    {
-                        ExplodeGem(adjacentGem, grid, x, ny, powerUpAudio);
-                    }
-
-                }
-            }
+            int d = System.Math.Abs(dx) + System.Math.Abs(dy);
+            if (d < bestDist) { bestDist = d; best = o; }
         }
 
+        if (!best.HasValue) return false;
+
+        if (stepX != 0)
+        {
+            int dy = best.Value.y - cy;
+            if (dy == 0) return false;
+            biasY = dy > 0 ? 1 : -1;
+        }
+        else
+        {
+            int dx = best.Value.x - cx;
+            if (dx == 0) return false;
+            biasX = dx > 0 ? 1 : -1;
+        }
+        return true;
+    }
+
+    private void ExplodeAt(GridSystem2D<GridObj> grid, int nx, int ny)
+    {
+        var gridObj = grid.GetValue(nx, ny);
+        if (gridObj == null) return;
+        var adjacentGem = gridObj.GetGem();
+        if (adjacentGem == null) return;
+
+        if (adjacentGem.GetGemType().gemCategory != GemCategory.Normal)
+        {
+            adjacentGem.Activate();
+        }
+        if (adjacentGem.GetGemType().IsObstacle())
+        {
+            base.ExplodeGem(adjacentGem, grid, nx, ny, powerUpAudio);
+        }
+        else
+        {
+            ExplodeGem(adjacentGem, grid, nx, ny, powerUpAudio);
+        }
     }
 }
-
-
-

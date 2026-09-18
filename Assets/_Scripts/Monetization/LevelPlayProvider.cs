@@ -105,6 +105,15 @@ namespace Match3Game.Monetization
 
         public void ShowRewarded(Action onReward, Action<string> onNoReward)
         {
+            // Rewarded ads are opt-in offers, gated by the same master switch
+            // as interstitials so a full ad shutoff is one flag flip.
+            if (!MonetizationConfig.REWARDED_ADS_ENABLED)
+            {
+                onNoReward?.Invoke("rewarded_disabled");
+                return;
+            }
+
+#pragma warning disable CS0162 // unreachable when the compile-time flag above is false; intentional for playtest gating
             if (!IsRewardedReady())
             {
                 onNoReward?.Invoke("not_ready");
@@ -115,6 +124,21 @@ namespace Match3Game.Monetization
             pendingReward = onReward;
             pendingNoReward = onNoReward;
             rewardedAd.ShowAd();
+#pragma warning restore CS0162
+        }
+
+        // ── Interstitials (disabled for Sep 11 playtest) ─────────────────────
+        // Interstitial support is not wired to a LevelPlay ad unit yet, but the
+        // gated hook lives here so when it lands, the feature flag guards it.
+        // Do NOT remove: the whole point of the playtest gating is that we can
+        // flip MonetizationConfig.INTERSTITIALS_ENABLED back on later.
+        internal void ShowInterstitialGated()
+        {
+            if (!MonetizationConfig.INTERSTITIALS_ENABLED) return;
+#pragma warning disable CS0162 // unreachable when the compile-time flag above is false; intentional for playtest gating
+            // TODO: create LevelPlayInterstitialAd, load in OnInitSuccess, show here.
+            Debug.Log("[Ads] LevelPlayProvider.ShowInterstitialGated: not implemented");
+#pragma warning restore CS0162
         }
 
         private void FinishNoReward(string reason)

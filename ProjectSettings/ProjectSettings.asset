@@ -142,9 +142,12 @@ PlayerSettings:
   loadStoreDebugModeEnabled: 0
   visionOSBundleVersion: 1.0
   tvOSBundleVersion: 1.0
-  bundleVersion: 0.1.0
+  bundleVersion: 1.0.0
   preloadedAssets:
   - {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  - {fileID: -5531470555809953936, guid: 5872b287ed2e6f146b5bbd28117d4882, type: 2}
+  - {fileID: 11400000, guid: 1b3a07c8c0e116b42a5ee45065455492, type: 2}
+  - {fileID: 11400000, guid: f41e8835cf13fe44cbfb46f9f6b38394, type: 2}
   metroInputSource: 0
   wsaTransparentSwapchain: 0
   m_HolographicPauseOnTrackingLoss: 1
@@ -295,7 +298,7 @@ PlayerSettings:
   - m_BuildTarget: 
     m_Icons:
     - serializedVersion: 2
-      m_Icon: {fileID: 2800000, guid: e07f245a1f63d7b44added678aee5a34, type: 3}
+      m_Icon: {fileID: 2800000, guid: 0e021a02f8a69b542955507886dee0b8, type: 3}
       m_Width: 128
       m_Height: 128
       m_Kind: 0
@@ -832,7 +835,7 @@ PlayerSettings:
   webGLCloseOnQuit: 0
   webWasm2023: 0
   scriptingDefineSymbols:
-    Android: DOTWEEN;LEVELPLAY_DEPENDENCIES_INSTALLED;LEVELPLAY_ENABLED
+    Android: DOTWEEN;LEVELPLAY_DEPENDENCIES_INSTALLED;LEVELPLAY_ENABLED;ODIN_INSPECTOR;ODIN_INSPECTOR_3;ODIN_INSPECTOR_3_1;ODIN_INSPECTOR_3_2;ODIN_INSPECTOR_3_3
     EmbeddedLinux: DOTWEEN
     GameCoreScarlett: DOTWEEN
     GameCoreXboxOne: DOTWEEN

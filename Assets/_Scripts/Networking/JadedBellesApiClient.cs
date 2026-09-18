@@ -104,6 +104,54 @@ namespace JadedBelles.Networking
             StartCoroutine(RefreshAccessTokenRoutine(onSuccess, onError));
         }
 
+        /// <summary>
+        /// Kicks off the Google Play-compliant self-serve account deletion
+        /// flow for the currently signed-in user's email (or any email the
+        /// caller supplies). The API responds with the same generic
+        /// "if that email exists, we've sent a link" message regardless of
+        /// whether the address matched a real account, so the client
+        /// treats every non-error response as success and tells the user
+        /// to check their inbox. Completing the deletion requires the user
+        /// to click the link in the email — nothing in the app can bypass
+        /// that email round-trip. Unauthenticated on purpose so it works
+        /// even if the app's saved token has expired.
+        /// </summary>
+        public void RequestAccountDeletion(string email, Action<ApiResponsePlain> onSuccess, Action<string> onError)
+        {
+            AccountDeletionRequestBody body = new AccountDeletionRequestBody { email = email };
+            StartCoroutine(SendRequest<ApiResponsePlain>(
+                UnityWebRequest.kHttpVerbPOST,
+                "/api/accountDeletion/request",
+                JsonUtility.ToJson(body),
+                false,
+                false,
+                onSuccess,
+                onError));
+        }
+
+        /// <summary>
+        /// Kicks off the self-serve password-reset flow for a supplied
+        /// email. Same generic "if that email exists, we've sent a link"
+        /// response contract as account deletion — the client treats
+        /// every non-error response as success and tells the user to
+        /// check their inbox. The user finishes the reset by clicking
+        /// the emailed link on the website (there is no in-app confirm
+        /// step). Unauthenticated on purpose so it works when the user
+        /// has forgotten their password and has no active session.
+        /// </summary>
+        public void RequestPasswordReset(string email, Action<ApiResponsePlain> onSuccess, Action<string> onError)
+        {
+            PasswordResetRequestBody body = new PasswordResetRequestBody { email = email };
+            StartCoroutine(SendRequest<ApiResponsePlain>(
+                UnityWebRequest.kHttpVerbPOST,
+                "/api/v1/auth/password-reset/request",
+                JsonUtility.ToJson(body),
+                false,
+                false,
+                onSuccess,
+                onError));
+        }
+
         public void Logout(Action<ApiResponsePlain> onSuccess, Action<string> onError)
         {
             StartCoroutine(SendRequest<ApiResponsePlain>(
@@ -138,6 +186,56 @@ namespace JadedBelles.Networking
         public void GetLevelCatalog(Action<string> onSuccess, Action<string> onError)
         {
             StartCoroutine(GetRawRoutine("/api/v1/match3/levels", onSuccess, onError));
+        }
+
+        /// <summary>Fetch the raw shop catalog JSON (anonymous endpoint, no envelope).</summary>
+        public void GetShopCatalog(Action<string> onSuccess, Action<string> onError)
+        {
+            StartCoroutine(GetRawRoutine("/api/v1/match3/shop", onSuccess, onError));
+        }
+
+        // ---------- Generic IAP + wallet (reusable across JadedBelles products) ----------
+
+        /// <summary>
+        /// Fetch the shop catalog for any JadedBelles product by slug. This is the
+        /// generic form of GetShopCatalog — new games plug in without adding a route.
+        /// Endpoint returns raw JSON in the ShopCatalog shape.
+        /// </summary>
+        public void GetShopCatalog(string slug, Action<string> onSuccess, Action<string> onError)
+        {
+            StartCoroutine(GetRawRoutine("/api/v1/games/" + slug + "/shop", onSuccess, onError));
+        }
+
+        /// <summary>Fetch the player's wallet for one product.</summary>
+        public void GetWallet(string slug, Action<ApiResponseWallet> onSuccess, Action<string> onError)
+        {
+            StartCoroutine(SendRequest<ApiResponseWallet>(
+                UnityWebRequest.kHttpVerbGET,
+                "/api/v1/games/" + slug + "/wallet",
+                null,
+                true,
+                true,
+                onSuccess,
+                onError));
+        }
+
+        /// <summary>
+        /// Post a store receipt for server-side verification. The server re-verifies
+        /// with Apple/Google/Stripe, grants the rewards, and returns the updated wallet.
+        /// clientNonce makes retries idempotent — send the same nonce if you retry after
+        /// a network flake and the server will return the original grant, not a duplicate.
+        /// </summary>
+        public void VerifyPurchase(string slug, PurchaseVerifyRequest body,
+            Action<ApiResponsePurchase> onSuccess, Action<string> onError)
+        {
+            StartCoroutine(SendRequest<ApiResponsePurchase>(
+                UnityWebRequest.kHttpVerbPOST,
+                "/api/v1/games/" + slug + "/purchases/verify",
+                JsonUtility.ToJson(body),
+                true,
+                true,
+                onSuccess,
+                onError));
         }
 
         // ---------- Generic game saves ----------

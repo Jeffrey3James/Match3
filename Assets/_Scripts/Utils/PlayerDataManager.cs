@@ -17,6 +17,10 @@ public class PlayerDataManager : MonoBehaviour
     private const string LocalUpdatedAtKey = "jb_player_data_updated_at";
     private const string RemoteRevisionKey = "jb_player_data_revision";
     private const int SaveSlot = 0;
+    // Bump only when a rename or migration breaks read-compat with older payloads.
+    // Pure additive fields (like the meta-system stars/winStreak/decorateProgress/*Boosters
+    // added by Agent E) do NOT require a schema bump: JsonUtility silently ignores unknown
+    // keys on read and writes new keys with defaults on write.
     private const int SaveSchemaVersion = 1;
 
     private void Awake()

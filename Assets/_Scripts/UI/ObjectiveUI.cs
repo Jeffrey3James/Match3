@@ -55,5 +55,14 @@ public class ObjectiveUI : MonoBehaviour
             listener.SetEventChannel(channel);
         }
     }
+
+    // ------------------------------------------------------------------
+    // Read-only accessors — used by ObjectiveIntroCard to mirror the
+    // objective art/count without re-plumbing Level data. Kept trivial so
+    // they can't drift from what's on-screen.
+    // ------------------------------------------------------------------
+
+    public Sprite GetObjectiveSprite() => objectiveImage != null ? objectiveImage.sprite : null;
+    public int GetObjectiveCount() => objectiveCount;
 }
 
