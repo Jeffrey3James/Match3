@@ -213,7 +213,8 @@ namespace JadedBelles.Networking
         /// <summary>Fetch the raw shop catalog JSON (anonymous endpoint, no envelope).</summary>
         public void GetShopCatalog(Action<string> onSuccess, Action<string> onError)
         {
-            StartCoroutine(GetRawRoutine("/api/v1/match3/shop", onSuccess, onError));
+            // Commerce uses "match3" (see Match3IAPBootstrap), not the save product slug.
+            GetShopCatalog("match3", onSuccess, onError);
         }
 
         // ---------- Generic IAP + wallet (reusable across JadedBelles products) ----------
