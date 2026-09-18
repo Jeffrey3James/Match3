@@ -7,7 +7,7 @@
 
 `/home/user/workspace/old-match3` has **no reusable ad SDK, mediation SDK, analytics SDK, remote-config/A/B-test system, rewarded/interstitial helper, or life system**. It is an earlier Unity 2022.3 project with a simple match-3 level loop, a login/ownership API client, and a basic win/lose HUD.
 
-The practical reusable idea is its event-driven terminal-state shape—not ad code: `GameManager` exposes level-win/loss and moves-changed events, while `GameplayHUD` consumes win/loss events and owns retry/navigation UI. Xandria Gem Jam already has comparable events and a richer existing life/economy system, so porting code from this project is not recommended.
+The practical reusable idea is its event-driven terminal-state shape—not ad code: `GameManager` exposes level-win/loss and moves-changed events, while `GameplayHUD` consumes win/loss events and owns retry/navigation UI. Xandria Gem Adventure already has comparable events and a richer existing life/economy system, so porting code from this project is not recommended.
 
 ## What was checked
 
@@ -34,7 +34,7 @@ The practical reusable idea is its event-driven terminal-state shape—not ad co
 - `Packages/manifest.json` has no Unity Services, mediation, analytics, Firebase, or third-party ad dependency.
 - Its README confirms scene assets were not included in the handoff, which makes direct prefab/UI reuse impractical.
 
-## Comparison with Xandria Gem Jam (current repo)
+## Comparison with Xandria Gem Adventure (current repo)
 
 The current Unity 6 project has no ad or analytics SDK integrated either, but it does have more relevant foundations:
 
@@ -48,4 +48,4 @@ The current Unity 6 project has no ad or analytics SDK integrated either, but it
 
 ## Conclusion
 
-Do not migrate ad code from `old-match3`: there is none. Build a clean, current Unity 6 integration in Xandria Gem Jam around its existing `GameEvents`, `Match3`, `Match3UI`, `PlayerHandler`, and `PlayerDataManager` boundaries. The implementation specification is in `AD-MONETIZATION-PLAN.md`.
+Do not migrate ad code from `old-match3`: there is none. Build a clean, current Unity 6 integration in Xandria Gem Adventure around its existing `GameEvents`, `Match3`, `Match3UI`, `PlayerHandler`, and `PlayerDataManager` boundaries. The implementation specification is in `AD-MONETIZATION-PLAN.md`.

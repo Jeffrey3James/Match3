@@ -1,4 +1,4 @@
-# Xandria Gem Jam — Chibi Art Replacement Set
+# Xandria Gem Adventure — Chibi Art Replacement Set
 
 **Status:** 19 of 19 assets generated successfully. Every PNG is 1024 × 1024, RGBA, and has a verified transparent background.
 

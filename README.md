@@ -1,9 +1,9 @@
-# Xandria Gem Jam
+# Xandria Gem Adventure
 
 A match-3 puzzle game built in Unity 6, shipping to **mobile (Android/iOS)** and **the browser (WebGL)**. It is part of the [JadedBelles](https://jadedbelles.com) platform: players can play as a guest with zero friction, or sign in with their JadedBelles account to sync progress across devices.
 
 - **Unity version:** `6000.0.34f1` (Unity 6) — Universal Render Pipeline
-- **Product name:** GemJam · **Bundle ID:** `com.JadedBelles.GemJam` · **Company:** JadedBelles
+- **Product name:** Xandria Gem Adventure · **Bundle ID:** `com.JadedBelles.XandriaGemAdventure` · **Company:** JadedBelles
 - **Backend:** [`jadedbelles-api`](https://github.com/Jeffrey3James/jadedbelles-api) at `https://api.jadedbelles.com`
 
 ---

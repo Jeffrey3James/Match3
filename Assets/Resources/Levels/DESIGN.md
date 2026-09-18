@@ -1,4 +1,4 @@
-# Xandria Gem Jam — 250-Level Design
+# Xandria Gem Adventure — 250-Level Design
 
 `tools/level-gen/generate_levels.py` is the deterministic source for this catalog. It uses
 seed `20260822`, preserves the authored records for IDs 0–4, and writes the pretty-printed

@@ -21,7 +21,7 @@ Also fixed in this PR: `Match3UI.cs` imported `UnityEditor.PackageManager`
 
 ### 1. LevelPlay dashboard (platform.ironsrc.com)
 1. Create an account / log in.
-2. Add two apps: Android (`com.JadedBelles.GemJam`) and iOS (same bundle id).
+2. Add two apps: Android (`com.JadedBelles.XandriaGemAdventure`) and iOS (same bundle id).
    Apps can be added as "not live in store yet" and updated later.
 3. For each app, note the **App Key**.
 4. Create a **Rewarded** ad unit for each app; note the **Ad Unit ID**.

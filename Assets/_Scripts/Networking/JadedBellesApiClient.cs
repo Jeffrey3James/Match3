@@ -20,7 +20,7 @@ namespace JadedBelles.Networking
         // Service Managed Certificate is bound to it.
         public const string BaseUrl = "https://jadedbelles-api-ewatbnarexfqane6.centralus-01.azurewebsites.net";
 
-        // Seeded match-3 product slug. Change this one value if Xandria Gem Jam uses a different production product.
+        // Seeded match-3 product slug. Change this one value if Xandria Gem Adventure uses a different production product.
         public const string GameProductSlug = "xandria-gem-jam";
 
         private const int RequestTimeoutSeconds = 30;
