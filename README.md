@@ -4,7 +4,7 @@ A match-3 puzzle game built in Unity 6, shipping to **mobile (Android/iOS)** and
 
 - **Unity version:** `6000.0.34f1` (Unity 6) — Universal Render Pipeline
 - **Product name:** Xandria Gem Adventure · **Bundle ID:** `com.JadedBelles.XandriaGemAdventure` · **Company:** JadedBelles
-- **Backend:** [`jadedbelles-api`](https://github.com/Jeffrey3James/jadedbelles-api) at `https://api.jadedbelles.com`
+- **Backend:** [`jadedbelles-api`](https://github.com/Jeffrey3James/jadedbelles-api) at `https://api.jadedbelles.com` --- NEEDS UPDATING
 
 ---
 
