@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c1ae8f2b63cb1c54d88e8ba973cd20a0
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275542
+  packageName: 3D Object Image for UGUI - MiniMap Inventory Portrait
+  packageVersion: 1.0.9
+  assetPath: Assets/Kamgam/UGUIWorldImage/Examples/Scripts/LinearMovement.cs
+  uploadId: 987114

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f0245194a49ee764c8182a5fab61f7f7
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: -1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275542
+  packageName: 3D Object Image for UGUI - MiniMap Inventory Portrait
+  packageVersion: 1.0.9
+  assetPath: Assets/Kamgam/UGUIWorldImage/Examples/Materials/Staff.mat
+  uploadId: 987114

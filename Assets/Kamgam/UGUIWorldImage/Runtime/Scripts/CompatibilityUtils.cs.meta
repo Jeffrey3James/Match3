@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 3e75d4bd77739fb408eb7d2463701b21
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275542
+  packageName: 3D Object Image for UGUI - MiniMap Inventory Portrait
+  packageVersion: 1.0.9
+  assetPath: Assets/Kamgam/UGUIWorldImage/Runtime/Scripts/CompatibilityUtils.cs
+  uploadId: 987114

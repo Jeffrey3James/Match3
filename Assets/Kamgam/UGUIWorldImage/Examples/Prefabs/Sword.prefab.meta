@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 8e0a68fa1d309114b8ac9462c2c0c76e
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275542
+  packageName: 3D Object Image for UGUI - MiniMap Inventory Portrait
+  packageVersion: 1.0.9
+  assetPath: Assets/Kamgam/UGUIWorldImage/Examples/Prefabs/Sword.prefab
+  uploadId: 987114
