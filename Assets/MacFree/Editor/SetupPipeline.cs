@@ -107,11 +107,9 @@ namespace MacFree.Editor
             if (string.IsNullOrEmpty(s.BuildTargetId)) s.BuildTargetId = "macfree-ios";
             if (!s.StepDone("target"))
             {
-                progress.Report("Selecting a supported Xcode version...");
-                string xcodeVersion = await uba.GetLatestXcodeVersion();
-                progress.Report("Creating the iOS build target...");
-                await uba.EnsureBuildTarget(s.BuildTargetId, "MacFree iOS", bundleId,
-                    unityVersion, branch, subdirectory, s.CredentialId, xcodeVersion);
+                progress.Report("Finding a compatible Unity / macOS / Xcode configuration...");
+                await uba.EnsureCompatibleBuildTarget(s.BuildTargetId, "MacFree iOS", bundleId,
+                    unityVersion, branch, subdirectory, s.CredentialId, progress);
                 Done("target");
             }
 
