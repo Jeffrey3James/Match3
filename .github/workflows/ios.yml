@@ -1,69 +1,74 @@
-name: Build iOS
+name: Build iOS Simulator
+
+run-name: iOS Simulator - ${{ github.ref_name }} - ${{ github.sha }}
 
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   unity-export:
     name: Export Xcode project from Unity
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
+    timeout-minutes: 90
 
     steps:
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: false
-          docker-images: false
-          swap-storage: true
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           lfs: true
 
+      - name: Record source revision
+        run: git log -1 --format='%H %s'
+
       - name: Cache Library
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-iOS-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Library-${{ runner.os }}-${{ runner.arch }}-iOS-Simulator-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
-            Library-iOS-
-            Library-
+            Library-${{ runner.os }}-${{ runner.arch }}-iOS-Simulator-
 
-           - name: Build Unity iOS
+      - name: Build Unity iOS
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
-          unityVersion: 6000.0.34f1
+          unityVersion: auto
           targetPlatform: iOS
-          buildMethod: BuildScript.BuildIOS
+          buildMethod: BuildScript.BuildIOSSimulator
           gitPrivateToken: ${{ secrets.JBA_UTIL_TOKEN }}
-          customParameters: -logFile build.log
 
-      - name: Show Unity log
+      - name: Upload Unity diagnostics
         if: always()
-        run: |
-          echo "===== UNITY BUILD LOG ====="
-          cat build.log || true
+        uses: actions/upload-artifact@v4
+        with:
+          name: Unity-iOS-logs
+          path: |
+            *.log
+            Logs/
+            ~/Library/Logs/Unity/Editor.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Upload iOS Xcode Project
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Xandria-Gem-Adventure-iOS
+          name: Xandria-Gem-Adventure-iOS-Xcode
           path: build/iOS
+          if-no-files-found: error
+          retention-days: 7
 
   xcode-build:
-    name: Build with Xcode
+    name: Build unsigned iOS simulator app
     needs: unity-export
     runs-on: macos-latest
+    timeout-minutes: 60
 
     steps:
       - name: Download Xcode project
@@ -75,15 +80,64 @@ jobs:
       - name: Fix script permissions
         run: |
           find ios-project -name "*.sh" -exec chmod +x {} \;
-          chmod +x ios-project/MapFileParser.sh 2>/dev/null || true
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios-project
+        run: |
+          if [[ -f Podfile ]]; then
+            pod install
+          fi
 
       - name: Build (simulator, no signing)
         working-directory: ios-project
+        shell: bash
         run: |
+          set -o pipefail
+          project=(-project Unity-iPhone.xcodeproj)
+          if [[ -d Unity-iPhone.xcworkspace ]]; then
+            project=(-workspace Unity-iPhone.xcworkspace)
+          fi
           xcodebuild \
-            -project Unity-iPhone.xcodeproj \
+            "${project[@]}" \
             -scheme Unity-iPhone \
             -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
             -configuration Release \
+            -derivedDataPath DerivedData \
+            -resultBundlePath BuildResults.xcresult \
+            ARCHS=arm64 \
             CODE_SIGNING_ALLOWED=NO \
-            build
+            build 2>&1 | tee xcodebuild.log
+
+      - name: Package simulator app
+        working-directory: ios-project
+        shell: bash
+        run: |
+          shopt -s nullglob
+          apps=(DerivedData/Build/Products/Release-iphonesimulator/*.app)
+          if [[ ${#apps[@]} -eq 0 ]]; then
+            echo "::error::Xcode did not produce a simulator app."
+            exit 1
+          fi
+          tar -czf Xandria-Gem-Adventure-iOS-Simulator.tar.gz \
+            -C DerivedData/Build/Products/Release-iphonesimulator \
+            "$(basename "${apps[0]}")"
+
+      - name: Upload simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: Xandria-Gem-Adventure-iOS-Simulator
+          path: ios-project/Xandria-Gem-Adventure-iOS-Simulator.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Xcode diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Xcode-iOS-logs
+          path: |
+            ios-project/xcodebuild.log
+            ios-project/BuildResults.xcresult
+          if-no-files-found: warn
+          retention-days: 7
