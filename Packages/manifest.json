@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.jadedbelles.util": "https://github.com/Jeffrey3James/JadedBellesUtil.git",
+    "com.jadedbelles.util": "https://github.com/Jeffrey3James/JadedBellesUtil.git#20d9e5357356b7fe3b6c663ef102e62f9f470946",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.adaptiveperformance": "5.1.4",
     "com.unity.adaptiveperformance.google.android": "5.1.4",
