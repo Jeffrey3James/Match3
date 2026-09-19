@@ -4,19 +4,35 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-ios:
-    name: Build Xandria Gem Adventure for iOS
-    runs-on: macos-latest
+  unity-export:
+    name: Export Xcode project from Unity
+    runs-on: ubuntu-latest
 
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          docker-images: false
+          swap-storage: true
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
           lfs: true
 
-      - name: Authenticate Git
-        run: |
-          git config --global url."https://${{ secrets.JBA_UTIL_TOKEN }}@github.com/".insteadOf "https://github.com/"
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-iOS-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-iOS-
+            Library-
 
       - name: Build Unity iOS
         uses: game-ci/unity-builder@v4
@@ -28,9 +44,38 @@ jobs:
           unityVersion: 6000.0.34f1
           targetPlatform: iOS
           buildMethod: BuildScript.BuildIOS
+          gitPrivateToken: ${{ secrets.JBA_UTIL_TOKEN }}
 
-      - name: Upload iOS Xcode Project
+      - name: Upload Xcode project
         uses: actions/upload-artifact@v4
         with:
-          name: Xandria-Gem-Adventure-iOS
+          name: Xandria-Gem-Adventure-iOS-Xcode
           path: build/iOS
+
+  xcode-build:
+    name: Build with Xcode
+    needs: unity-export
+    runs-on: macos-latest
+
+    steps:
+      - name: Download Xcode project
+        uses: actions/download-artifact@v4
+        with:
+          name: Xandria-Gem-Adventure-iOS-Xcode
+          path: ios-project
+
+      - name: Fix script permissions
+        run: |
+          find ios-project -name "*.sh" -exec chmod +x {} \;
+          chmod +x ios-project/MapFileParser.sh 2>/dev/null || true
+
+      - name: Build (simulator, no signing)
+        working-directory: ios-project
+        run: |
+          xcodebuild \
+            -project Unity-iPhone.xcodeproj \
+            -scheme Unity-iPhone \
+            -sdk iphonesimulator \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            build
