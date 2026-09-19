@@ -77,44 +77,119 @@ namespace MacFree.Editor
             return node["credentialid"].Value;
         }
 
-        // Build Automation publishes the Xcode versions it currently offers
-        // at a project-independent endpoint. We pick the newest one that is
-        // neither deprecated nor hidden, so setup never pins a version Apple
-        // or UBA will later retire - and it needs no per-machine config. The
-        // API used to accept the alias "latest"; it now rejects it and
-        // requires a specific version, which is why this lookup exists.
-        public async Task<string> GetLatestXcodeVersion()
+        // The global Xcode list is NOT a compatibility list. In particular,
+        // the newest Xcode may be on an image without this Unity editor.
+        // Query the documented OS endpoint with BOTH versions before creating
+        // a target. Never change Unity versions or fall back below the current
+        // App Store SDK requirement to make provisioning appear successful.
+        const long MinimumXcodeScore = 26000000; // Xcode 26 / iOS 26 SDK
+
+        async Task<List<string>> GetXcodeCandidates()
         {
             var node = await SendUrl(HttpMethod.Get, apiRoot + "/versions/xcode",
                 null, "List Xcode versions");
-            var arr = node.AsArray;
-            string best = null;
-            long bestScore = -1;
-            for (int i = 0; i < arr.Count; i++)
+            if (!node.IsArray)
+                throw new InvalidOperationException("Build Automation returned an invalid Xcode catalog.");
+            var candidates = new List<string>();
+            for (int i = 0; i < node.Count; i++)
             {
-                var v = arr[i];
+                var v = node[i];
                 if (v["deprecated"].AsBool || v["hidden"].AsBool) continue;
-                long score = ScoreXcode(v["value"].Value);
-                if (score > bestScore) { bestScore = score; best = v["value"].Value; }
+                string value = v["value"].Value;
+                if (ScoreXcode(value) >= MinimumXcodeScore && !candidates.Contains(value))
+                    candidates.Add(value);
             }
-            if (string.IsNullOrEmpty(best))
-                throw new MacFreeApiException("List Xcode versions", 200,
-                    "Build Automation returned no usable Xcode versions.");
-            return best;
+            candidates.Sort((a, b) => ScoreXcode(b).CompareTo(ScoreXcode(a)));
+            return candidates;
+        }
+
+        public async Task<string> EnsureCompatibleBuildTarget(string targetId, string targetName,
+            string bundleId, string unityVersion, string branch, string subdirectory,
+            string credentialId, IProgress<string> progress = null)
+        {
+            if (string.IsNullOrWhiteSpace(unityVersion))
+                throw new ArgumentException("The project's exact Unity version is required.", "unityVersion");
+
+            string unityToken = unityVersion.Replace('.', '_');
+            var candidates = await GetXcodeCandidates();
+            var checkedVersions = new List<string>();
+            MacFreeApiException lastMismatch = null;
+            foreach (string xcode in candidates)
+            {
+                checkedVersions.Add(xcode);
+                progress?.Report("Checking Unity " + unityVersion + " with " + xcode + "...");
+                string path = apiRoot + "/versions/operatingsystem?family=mac"
+                    + "&unity_version=" + Uri.EscapeDataString(unityToken)
+                    + "&xcode_version=" + Uri.EscapeDataString(xcode);
+                var systems = await SendUrl(HttpMethod.Get, path, null, "Check build compatibility");
+                if (!systems.IsArray)
+                    throw new InvalidOperationException(
+                        "Build Automation returned an invalid operating-system compatibility catalog.");
+
+                bool compatible = false;
+                for (int i = 0; i < systems.Count; i++)
+                {
+                    var os = systems[i];
+                    if (os["family"].Value == "mac" && !os["hidden"].AsBool
+                        && !os["deprecated"].AsBool && !string.IsNullOrEmpty(os["value"].Value))
+                    {
+                        compatible = true;
+                        break;
+                    }
+                }
+                if (!compatible) continue;
+
+                try
+                {
+                    progress?.Report("Creating the iOS build target with " + xcode + "...");
+                    await EnsureBuildTarget(targetId, targetName, bundleId, unityVersion,
+                        branch, subdirectory, credentialId, xcode);
+                    progress?.Report("Build target configured: Unity " + unityVersion + ", " + xcode + ".");
+                    return xcode;
+                }
+                catch (MacFreeApiException e) when (IsOperatingSystemMismatch(e))
+                {
+                    // Catalogs and target provisioning can briefly disagree.
+                    // Retry ONLY this specific rejection, not auth, signing,
+                    // billing, network failures or unrelated server errors.
+                    lastMismatch = e;
+                    progress?.Report(xcode + " was rejected by the builder; checking the next version...");
+                }
+            }
+
+            string checkedText = checkedVersions.Count == 0 ? "none available"
+                : string.Join(", ", checkedVersions);
+            throw new InvalidOperationException(
+                "Unity Build Automation has no usable macOS/Xcode configuration for Unity "
+                + unityVersion + " among its visible, non-deprecated Xcode 26+ releases. Checked: "
+                + checkedText + ". Your Unity version was not changed. Check this exact version in "
+                + "Unity Cloud > Build Automation; a newly released editor may not be available yet. "
+                + "Retry SET UP when it is available, or use a separately verified build runner. "
+                + "Do not reset your Apple signing setup.", lastMismatch);
+        }
+
+        internal static bool IsOperatingSystemMismatch(MacFreeApiException e)
+        {
+            return (e.Status == 400 || e.Status == 500)
+                && (e.Body ?? "").IndexOf("Could not find an operating system",
+                    StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         // "xcode26_5_0" -> 26*1e6 + 5*1e3 + 0, so the newest sorts highest no
         // matter what order the API returns the versions in.
         static long ScoreXcode(string value)
         {
-            if (string.IsNullOrEmpty(value)) return -1;
-            string digits = value.StartsWith("xcode") ? value.Substring(5) : value;
-            string[] parts = digits.Split('_');
+            if (string.IsNullOrEmpty(value) || !value.StartsWith("xcode", StringComparison.Ordinal))
+                return -1;
+            string[] parts = value.Substring(5).Split('_');
+            if (parts.Length != 3) return -1;
             long score = 0;
             for (int i = 0; i < 3; i++)
             {
-                long n = 0;
-                if (i < parts.Length) long.TryParse(parts[i], out n);
+                int n;
+                if (!int.TryParse(parts[i], System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture, out n) || n < 0 || n >= 1000)
+                    return -1;
                 score = score * 1000 + n;
             }
             return score;
@@ -156,6 +231,8 @@ namespace MacFree.Editor
             return "{\"name\":\"" + JsonUtil.Esc(name) + "\",\"platform\":\"ios\",\"enabled\":true,"
                 + "\"settings\":{\"autoBuild\":false,"
                 + "\"unityVersion\":\"" + JsonUtil.Esc(unityVersion) + "\","
+                + "\"autoDetectUnityVersion\":false,\"fallbackPatchVersion\":false,"
+                + "\"operatingSystemSelected\":\"mac\","
                 + "\"scm\":{\"type\":\"" + JsonUtil.Esc(scmType) + "\",\"branch\":\"" + JsonUtil.Esc(branch) + "\"" + scmSub + "},"
                 + "\"platform\":{\"bundleId\":\"" + JsonUtil.Esc(bundleId) + "\",\"xcodeVersion\":\"" + JsonUtil.Esc(xcodeVersion) + "\"},"
                 + "\"advanced\":{\"unity\":{"
