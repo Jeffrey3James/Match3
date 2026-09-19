@@ -167,7 +167,7 @@ public class DecoratePanel : MonoBehaviour
         // Success. Swap sprite and celebrate.
         Image icon = SafeGet(taskIcons, taskIndex);
         Sprite after = SafeGet(taskIconsAfter, taskIndex);
-        if (icon != null && after != null) icon.sourceImage = after;
+        if (icon != null && after != null) icon.sprite = after;
 
         Button restoreBtn = SafeGet(taskRestoreButtons, taskIndex);
         if (restoreBtn != null) restoreBtn.gameObject.SetActive(false);

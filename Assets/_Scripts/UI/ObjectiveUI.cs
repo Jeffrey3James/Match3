@@ -62,7 +62,7 @@ public class ObjectiveUI : MonoBehaviour
     // they can't drift from what's on-screen.
     // ------------------------------------------------------------------
 
-    public Sprite GetObjectiveSprite() => objectiveImage != null ? objectiveImage.sourceImage : null;
+    public Sprite GetObjectiveSprite() => objectiveImage != null ? objectiveImage.sprite : null;
     public int GetObjectiveCount() => objectiveCount;
 }
 
