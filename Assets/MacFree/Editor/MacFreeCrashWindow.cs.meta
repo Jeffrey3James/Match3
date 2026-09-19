@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: 7e21273a833d6ad49856ae2d471a97c3
+AssetOrigin:
+  serializedVersion: 1
+  productId: 393988
+  packageName: MacFree iOS Builder for Unity to TestFlight
+  packageVersion: 1.1
+  assetPath: Assets/MacFree/Editor/MacFreeCrashWindow.cs
+  uploadId: 979892

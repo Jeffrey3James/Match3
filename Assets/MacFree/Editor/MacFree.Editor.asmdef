@@ -1,0 +1,14 @@
+{
+  "name": "MacFree.Editor",
+  "rootNamespace": "MacFree.Editor",
+  "references": [],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": ["BouncyCastle.Crypto.dll", "UnityEditor.iOS.Extensions.Xcode.dll"],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: 18539d1a553d1544bb4f4a74dc4ac2c6
+AssetOrigin:
+  serializedVersion: 1
+  productId: 393988
+  packageName: MacFree iOS Builder for Unity to TestFlight
+  packageVersion: 1.1
+  assetPath: Assets/MacFree/Editor/SigningFactory.cs
+  uploadId: 979892

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 7853e8e26176f1245b7ef05dd4909b84
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 393988
+  packageName: MacFree iOS Builder for Unity to TestFlight
+  packageVersion: 1.1
+  assetPath: Assets/MacFree/Documentation/MacFree-Manual.md
+  uploadId: 979892

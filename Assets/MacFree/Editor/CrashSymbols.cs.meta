@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: a45cb2b9b2bc713478e8b257a680a51c
+AssetOrigin:
+  serializedVersion: 1
+  productId: 393988
+  packageName: MacFree iOS Builder for Unity to TestFlight
+  packageVersion: 1.1
+  assetPath: Assets/MacFree/Editor/CrashSymbols.cs
+  uploadId: 979892

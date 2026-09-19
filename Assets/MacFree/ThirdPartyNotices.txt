@@ -1,0 +1,8 @@
+MacFree - iOS Builder bundles the following third-party software:
+
+1) Bouncy Castle C# (BouncyCastle.Crypto.dll), (c) The Legion of the Bouncy
+   Castle Inc. Licensed under the Bouncy Castle License (MIT X11 style):
+   https://www.bouncycastle.org/csharp/licence.html
+
+2) SimpleJSON by Bunny83, distributed under the terms in its file header
+   (public-domain-style): https://github.com/Bunny83/SimpleJSON

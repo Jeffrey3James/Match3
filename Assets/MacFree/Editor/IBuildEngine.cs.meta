@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: 3b0234d36d01c3a4c980af14a3ba68ed
+AssetOrigin:
+  serializedVersion: 1
+  productId: 393988
+  packageName: MacFree iOS Builder for Unity to TestFlight
+  packageVersion: 1.1
+  assetPath: Assets/MacFree/Editor/IBuildEngine.cs
+  uploadId: 979892
