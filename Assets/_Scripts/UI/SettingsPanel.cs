@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using JadedBelles.Networking;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -35,6 +36,9 @@ public class SettingsPanel : MonoBehaviour {
   public static bool ChatEnabled => GetBool(ChatPrefKey);
   public static bool LastSeenEnabled => GetBool(LastSeenPrefKey);
   public static bool NotificationsEnabled => GetBool(NotificationsPrefKey);
+
+
+  [SerializeField] private TextMeshProUGUI playerName;
 
   private static bool GetBool ( string key ) {
     return PlayerPrefs.GetInt(key, 1) == 1;
@@ -89,6 +93,11 @@ public class SettingsPanel : MonoBehaviour {
 
     if(deleteAccountButton != null)
       deleteAccountButton.onClick.AddListener(OnDeleteAccountClicked);
+  }
+
+  private void Start () {
+    if(playerName != null)
+      playerName.text = PlayerHandler.instance.playerData.playerName;
   }
 
   private void OnEnable () {

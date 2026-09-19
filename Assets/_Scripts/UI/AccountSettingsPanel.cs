@@ -128,11 +128,9 @@ public class AccountSettingsPanel : MonoBehaviour
     /// <summary>Opens the panel. Hook to a "Delete Account" button in your settings menu.</summary>
     public void Show()
     {
-<<<<<<< HEAD
         if (!gameObject.activeSelf) gameObject.SetActive(true);
-=======
         gameObject.SetActive(true);
->>>>>>> dddf3755720271012d59ed080890d92253b7764b
+
         if (panelRoot != null) panelRoot.SetActive(true);
         transform.SetAsLastSibling();
         if (_busy) return;
