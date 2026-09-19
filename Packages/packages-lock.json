@@ -1,11 +1,11 @@
 {
   "dependencies": {
     "com.jadedbelles.util": {
-      "version": "https://github.com/Jeffrey3James/JadedBellesUtil.git",
+      "version": "https://github.com/Jeffrey3James/JadedBellesUtil.git#943326d8caebf6a5d9712a893b1f28d14957b9ae",
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "802b3645ec8b880be138e1a1ddf3fc330863f88d"
+      "hash": "943326d8caebf6a5d9712a893b1f28d14957b9ae"
     },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
