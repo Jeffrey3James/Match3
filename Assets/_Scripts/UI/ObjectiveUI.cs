@@ -12,7 +12,7 @@ public class ObjectiveUI : MonoBehaviour
 
     public void SetObjectiveImage(Sprite sprite)
     {
-        objectiveImage.sourceImage = sprite;
+        objectiveImage.overrideSprite = sprite;
     }
 
     public void SetObjectiveCount(int count)

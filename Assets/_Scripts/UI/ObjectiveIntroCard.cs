@@ -105,7 +105,7 @@ public class ObjectiveIntroCard : MonoBehaviour
 
             var iconGO = Instantiate(iconPrefab.gameObject, iconContainer);
             var img = iconGO.GetComponentInChildren<Image>();
-            if (img != null) img.sourceImage = cfg.typesToClear.sprite;
+            if (img != null) img.overrideSprite = cfg.typesToClear.sprite;
 
             var label = iconGO.GetComponentInChildren<TMPro.TextMeshProUGUI>();
             if (label != null) label.text = "x" + cfg.amountToClear;

@@ -39,7 +39,7 @@ public class DecoratePanel : MonoBehaviour
     [SerializeField] private GameObject[] taskCardRoots;
 
     [Tooltip("Image component on each card whose sprite we swap between before/after.")]
-    [SerializeField] private Image[] taskIcons;
+    [SerializeField] private UnityEngine.UI.Image[] taskIcons;
 
     [Tooltip("Optional label per card that shows the task name.")]
     [SerializeField] private TMP_Text[] taskNameLabels;
@@ -118,7 +118,7 @@ public class DecoratePanel : MonoBehaviour
         if (icon != null)
         {
             Sprite chosen = done ? SafeGet(taskIconsAfter, i) : SafeGet(taskIconsBefore, i);
-            if (chosen != null) icon.sourceImage = chosen;
+            if (chosen != null) icon.overrideSprite = chosen;
         }
 
         // Name and cost labels are pure display.

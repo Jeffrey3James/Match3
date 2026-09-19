@@ -55,7 +55,7 @@ public class ShopItemCard : MonoBehaviour
         {
             // Sprites live in Resources/UI/XandriaKit/ — mirrors LevelHandler's bundled-asset pattern.
             var sprite = Resources.Load<Sprite>("UI/XandriaKit/" + item.iconSprite);
-            if (sprite != null) icon.sourceImage = sprite;
+            if (sprite != null) icon.overrideSprite = sprite;
         }
 
         bool hasBadge = !string.IsNullOrEmpty(item.badge);

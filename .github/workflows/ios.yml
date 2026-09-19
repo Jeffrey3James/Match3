@@ -34,7 +34,7 @@ jobs:
             Library-iOS-
             Library-
 
-      - name: Build Unity iOS
+           - name: Build Unity iOS
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -45,11 +45,19 @@ jobs:
           targetPlatform: iOS
           buildMethod: BuildScript.BuildIOS
           gitPrivateToken: ${{ secrets.JBA_UTIL_TOKEN }}
+          customParameters: -logFile build.log
 
-      - name: Upload Xcode project
+      - name: Show Unity log
+        if: always()
+        run: |
+          echo "===== UNITY BUILD LOG ====="
+          cat build.log || true
+
+      - name: Upload iOS Xcode Project
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Xandria-Gem-Adventure-iOS-Xcode
+          name: Xandria-Gem-Adventure-iOS
           path: build/iOS
 
   xcode-build:

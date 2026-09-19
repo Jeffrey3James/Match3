@@ -1,4 +1,4 @@
-using System.Collections;
+/*using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,8 +17,8 @@ public class CharacterCompanion : MonoBehaviour
 {
     [Header("Portrait")]
     [Tooltip("Assign Assets/_Characters/XandriaAndArmadillo.png here.")]
-    [SerializeField] private Image portraitImage;
-    [SerializeField] private Sprite portraitSprite;
+    [SerializeField] private UnityEngine.UI.Image portraitImage;
+    [SerializeField] private UnityEngine.Sprite portraitSprite;
 
     [Header("Speech Bubble")]
     [SerializeField] private GameObject speechBubbleRoot;
@@ -173,3 +173,4 @@ public class CharacterCompanion : MonoBehaviour
         if (speechBubbleRoot != null) speechBubbleRoot.SetActive(show);
     }
 }
+*/
