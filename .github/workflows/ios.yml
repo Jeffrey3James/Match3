@@ -14,6 +14,10 @@ jobs:
         with:
           lfs: true
 
+      - name: Authenticate Git
+        run: |
+          git config --global url."https://${{ secrets.JBA_UTIL_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
       - name: Build Unity iOS
         uses: game-ci/unity-builder@v4
         env:
