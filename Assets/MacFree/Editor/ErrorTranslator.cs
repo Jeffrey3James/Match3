@@ -82,13 +82,6 @@ namespace MacFree.Editor
                 hint = "Update MacFree — it now selects a supported Xcode version automatically "
                     + "from Build Automation.";
             }
-            else if (UbaApi.IsOperatingSystemMismatch(api))
-            {
-                hint = "Build Automation could not provision this Unity/Xcode combination. "
-                    + "Run SET UP with the compatibility-aware MacFree client; it checks macOS "
-                    + "availability for your exact Unity version before selecting Xcode. "
-                    + "This is not a game compilation error. Do not reset Apple signing.";
-            }
             // The Unity org hasn't turned on Build Automation. Everything up to
             // the cloud build succeeded; Unity just won't run builds until the
             // org opts in (there is a free tier). Not fixable from the editor.

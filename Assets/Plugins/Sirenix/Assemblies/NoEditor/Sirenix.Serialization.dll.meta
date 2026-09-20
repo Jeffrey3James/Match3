@@ -79,7 +79,7 @@ PluginImporter:
       enabled: 1
       settings: {}
     iOS:
-      enabled: 1
+      enabled: 0
       settings: {}
     tvOS:
       enabled: 1

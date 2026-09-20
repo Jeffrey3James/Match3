@@ -58,20 +58,6 @@ unwinding the stack and names nothing you wrote. MacFree reads the
 is actually named, and shows it above the crashed thread.
 
 ## Troubleshooting
-- **"Could not find an operating system" when creating a build target:** update
-  the MacFree scripts and run **SET UP EVERYTHING** again. Do not use **Reset
-  setup state (advanced)**: completed signing steps are retained, and the failed
-  target step is retried. MacFree now checks Unity's macOS compatibility catalog
-  using your exact Unity version and each eligible Xcode version, newest first.
-  It skips hidden/deprecated entries, beta aliases, and Xcode versions below 26.
-  If target provisioning rejects a pair that the catalog accepted, it tries the
-  next eligible pair. Other errors stop immediately rather than being hidden.
-  If no pair is available, the error names the Unity and Xcode versions checked.
-  A newly released editor may not yet be available on Unity's cloud images;
-  MacFree cannot install it there or guarantee that changing Xcode will help.
-  It never silently downgrades your Unity project.
-  Compatibility API: https://build-api.cloud.unity3d.com/docs/#/config
-  Xcode availability: https://docs.unity.com/en-us/build-automation/reference/available-xcode-versions
 - "bundle version must be higher": Apple remembers the highest build
   number ever uploaded. MacFree stamps monotonic timestamps, so this only
   appears if another tool uploaded a higher number - it resolves itself
